@@ -9,8 +9,10 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@prisma/client": "6.5.0",
     "next": "16.0.7",
     "react": "19.2.0",
+    "react-color": "^2.19.3",
     "react-dom": "19.2.0"
   },
   "devDependencies": {
@@ -21,6 +23,7 @@
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.0.7",
+    "prisma": "6.5.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

@@ -1,0 +1,51 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+/// ユーザー（将来自前認証もできるように）
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String?  
+  name         String?
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memos        Memo[]
+}
+
+/// メモ
+model Memo {
+  id          String   @id @default(cuid())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  title       String
+  content     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  reviewPlans ReviewPlan[]
+
+  @@index([userId])
+}
+
+/// 復習予定
+model ReviewPlan {
+  id          String             @id @default(cuid())
+  memo        Memo               @relation(fields: [memoId], references: [id], onDelete: Cascade)
+  memoId      String
+  scheduledAt DateTime
+  doneAt      DateTime?
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([memoId])
+  @@index([scheduledAt])
+}
