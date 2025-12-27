@@ -29,9 +29,9 @@ export class PrismaUserRepository implements UserRepository {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2002'
       ) {
-        throw new RepositoryConflictError('すでに応募者が存在します。', e);
+        throw new RepositoryConflictError('すでにユーザーが存在します。', e);
       }
-      throw new RepositoryPersistenceError('応募者の作成に失敗しました。', e);
+      throw new RepositoryPersistenceError('ユーザーの作成に失敗しました。', e);
     }
   }
 
