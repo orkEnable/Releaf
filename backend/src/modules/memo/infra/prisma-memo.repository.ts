@@ -35,12 +35,27 @@ export class PrismaMemoRepository implements MemoRepository {
   }
 
   async findById(id: string): Promise<Memo | null> {
-    return await this.prisma.memo.findUnique({
+    const record = await this.prisma.memo.findUnique({
       where: { id },
     });
+
+    if (record === null) {
+      return null;
+    }
+    return Memo.create(
+      record.id,
+      record.userId,
+      record.title,
+      record.content,
+      record.createdAt,
+      record.updatedAt,
+    );
   }
 
   async findAll(): Promise<Memo[]> {
-    return await this.prisma.memo.findMany();
+    const records = await this.prisma.memo.findMany();
+    return records.map((r) =>
+      Memo.create(r.id, r.userId, r.title, r.content, r.createdAt, r.updatedAt),
+    );
   }
 }
