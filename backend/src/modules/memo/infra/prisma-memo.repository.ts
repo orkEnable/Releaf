@@ -81,7 +81,7 @@ export class PrismaMemoRepository implements MemoRepository {
     if (record === null) {
       return null;
     }
-    return Memo.create(
+    return Memo.from(
       record.id,
       record.userId,
       record.title,
