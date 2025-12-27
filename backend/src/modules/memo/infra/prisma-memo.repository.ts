@@ -7,11 +7,21 @@ import { PrismaService } from '../../../../prisma/prisma.service';
 export class PrismaMemoRepository implements MemoRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async save(memo: Memo): Promise<void> {
+  async create(memo: Memo): Promise<void> {
     await this.prisma.memo.create({
       data: {
         id: memo.id,
         userId: memo.userId,
+        title: memo.title,
+        content: memo.content,
+      },
+    });
+  }
+
+  async update(memo: Memo): Promise<void> {
+    await this.prisma.memo.update({
+      where: { id: memo.id },
+      data: {
         title: memo.title,
         content: memo.content,
       },
