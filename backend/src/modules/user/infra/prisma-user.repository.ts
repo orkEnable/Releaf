@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { UserRepository } from '../domain/user.repository';
 import { User } from '../domain/entities/user.entity';
-import { PrismaService } from 'prisma/prisma.service';
+import { PrismaService } from '../../../../prisma/prisma.service';
 import {
   RepositoryConflictError,
   RepositoryNotFoundError,
   RepositoryPersistenceError,
-} from 'src/modules/common/errors';
+} from '../../common/errors';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
@@ -27,7 +27,7 @@ export class PrismaUserRepository implements UserRepository {
     } catch (e) {
       if (
         e instanceof Prisma.PrismaClientKnownRequestError &&
-        e.code === 'P2022'
+        e.code === 'P2002'
       ) {
         throw new RepositoryConflictError('すでに応募者が存在します。', e);
       }
