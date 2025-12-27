@@ -30,9 +30,6 @@ export class Memo {
     createdAt: Date,
     updatedAt: Date,
   ): Memo {
-    if (!title || title.trim().length === 0) {
-      throw new Error('タイトルは必須です');
-    }
     return new Memo(id, userId, title, content, createdAt, updatedAt);
   }
 }
