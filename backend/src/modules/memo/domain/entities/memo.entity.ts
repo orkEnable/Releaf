@@ -21,4 +21,15 @@ export class Memo {
     }
     return new Memo(id, userId, title, content, createdAt, updatedAt);
   }
+
+  static from(
+    id: string,
+    userId: string,
+    title: string,
+    content: string,
+    createdAt: Date,
+    updatedAt: Date,
+  ): Memo {
+    return new Memo(id, userId, title, content, createdAt, updatedAt);
+  }
 }

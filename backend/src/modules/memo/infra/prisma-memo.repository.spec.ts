@@ -1,7 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { PrismaMemoRepository } from '../infra/prisma-memo.repository';
+import { PrismaMemoRepository } from './prisma-memo.repository';
 import { PrismaService } from '../../../../prisma/prisma.service';
-import { Memo } from './entities/memo.entity';
+import { Memo } from '../domain/entities/memo.entity';
+import {
+  RepositoryConflictError,
+  RepositoryNotFoundError,
+} from '../../common/errors';
 
 describe('PrismaMemoRepository', () => {
   let repository: PrismaMemoRepository;
@@ -24,6 +28,8 @@ describe('PrismaMemoRepository', () => {
     const testUser = await prismaService.user.create({
       data: {
         email: `test-${Date.now()}@example.com`,
+        passwordHash: 'test-password-hash',
+        name: 'Test User',
       },
     });
     testUserId = testUser.id;
@@ -168,47 +174,6 @@ describe('PrismaMemoRepository', () => {
       });
     });
 
-    describe('findAll', () => {
-      it('全件指定でメモをとってこれる', async () => {
-        const now = new Date();
-        const memo1 = Memo.create(
-          `test-id-1-${Date.now()}`,
-          testUserId,
-          'Test Title 1',
-          'Test Content 1',
-          now,
-          now,
-        );
-        const memo2 = Memo.create(
-          `test-id-2-${Date.now()}`,
-          testUserId,
-          'Test Title 2',
-          'Test Content 2',
-          now,
-          now,
-        );
-
-        await repository.create(memo1);
-        await repository.create(memo2);
-
-        const result = await repository.findAll();
-
-        expect(result.length).toBeGreaterThanOrEqual(2);
-        const foundMemos = result.filter(
-          (m) => m.id === memo1.id || m.id === memo2.id,
-        );
-        expect(foundMemos.length).toBe(2);
-      });
-
-      it('メモが存在しない場合、空配列を返す', async () => {
-        // afterEachでクリーンアップされているので、空配列になる
-        const result = await repository.findAll();
-        const userMemos = result.filter((m) => m.userId === testUserId);
-
-        expect(userMemos.length).toBe(0);
-      });
-    });
-
     describe('delete', () => {
       it('should delete a memo', async () => {
         const now = new Date();
@@ -260,22 +225,62 @@ describe('PrismaMemoRepository', () => {
           );
         }).toThrow('タイトルは必須です');
       });
+
+      it('メモ作成時に、すでに存在していればRepositoryConflictErrorが投げられる', async () => {
+        const now = new Date();
+        const memoId = `test-id-${Date.now()}`;
+        const memo1 = Memo.create(
+          memoId,
+          testUserId,
+          'Test Title 1',
+          'Test Content 1',
+          now,
+          now,
+        );
+        const memo2 = Memo.create(
+          memoId, // 同じIDを使用
+          testUserId,
+          'Test Title 2',
+          'Test Content 2',
+          now,
+          now,
+        );
+
+        await repository.create(memo1);
+
+        await expect(repository.create(memo2)).rejects.toThrow(
+          RepositoryConflictError,
+        );
+      });
     });
 
     describe('update', () => {
-      // 異常系のテストケースは必要に応じて追加
-    });
+      it('更新時対象がなければRepositoryNotFoundErrorが投げられる', async () => {
+        const now = new Date();
+        const nonExistentMemoId = `non-existent-${Date.now()}`;
+        const memo = Memo.create(
+          nonExistentMemoId,
+          testUserId,
+          'Test Title',
+          'Test Content',
+          now,
+          now,
+        );
 
-    describe('findById', () => {
-      // 異常系のテストケースは必要に応じて追加
-    });
-
-    describe('findAll', () => {
-      // 異常系のテストケースは必要に応じて追加
+        await expect(repository.update(memo)).rejects.toThrow(
+          RepositoryNotFoundError,
+        );
+      });
     });
 
     describe('delete', () => {
-      // 異常系のテストケースは必要に応じて追加
+      it('削除時に対象がなければRepositoryNotFoundErrorが投げられる', async () => {
+        const nonExistentMemoId = `non-existent-${Date.now()}`;
+
+        await expect(repository.delete(nonExistentMemoId)).rejects.toThrow(
+          RepositoryNotFoundError,
+        );
+      });
     });
   });
 });
