@@ -124,11 +124,21 @@ describe('PrismaUserRepository', () => {
       it('ユーザーの名前を変更できる', async () => {
         const userId = `test-id-${Date.now()}`;
         const email = `test-${Date.now()}@example.com`;
-        const user = User.create(userId, email, 'password-hash', 'Original Name');
+        const user = User.create(
+          userId,
+          email,
+          'password-hash',
+          'Original Name',
+        );
 
         await repository.create(user);
 
-        const updatedUser = User.create(userId, email, 'password-hash', 'Updated Name');
+        const updatedUser = User.create(
+          userId,
+          email,
+          'password-hash',
+          'Updated Name',
+        );
         await repository.update(updatedUser);
 
         const result = await repository.findById(userId);
@@ -142,11 +152,21 @@ describe('PrismaUserRepository', () => {
       it('ユーザーのパスワードハッシュを変更できる', async () => {
         const userId = `test-id-${Date.now()}`;
         const email = `test-${Date.now()}@example.com`;
-        const user = User.create(userId, email, 'original-password-hash', 'Test User');
+        const user = User.create(
+          userId,
+          email,
+          'original-password-hash',
+          'Test User',
+        );
 
         await repository.create(user);
 
-        const updatedUser = User.create(userId, email, 'new-password-hash', 'Test User');
+        const updatedUser = User.create(
+          userId,
+          email,
+          'new-password-hash',
+          'Test User',
+        );
         await repository.update(updatedUser);
 
         const result = await repository.findById(userId);
@@ -179,8 +199,18 @@ describe('PrismaUserRepository', () => {
     describe('create', () => {
       it('ユーザー作成時に、すでに存在していればRepositoryConflictErrorが投げられる', async () => {
         const email = `test-${Date.now()}@example.com`;
-        const user1 = User.create(`test-id-1-${Date.now()}`, email, 'password-hash', 'Test User 1');
-        const user2 = User.create(`test-id-2-${Date.now()}`, email, 'password-hash', 'Test User 2');
+        const user1 = User.create(
+          `test-id-1-${Date.now()}`,
+          email,
+          'password-hash',
+          'Test User 1',
+        );
+        const user2 = User.create(
+          `test-id-2-${Date.now()}`,
+          email,
+          'password-hash',
+          'Test User 2',
+        );
 
         await repository.create(user1);
 
@@ -208,14 +238,28 @@ describe('PrismaUserRepository', () => {
       it('更新時にメールアドレスが重複していればRepositoryConflictErrorが投げられる', async () => {
         const email1 = `test-1-${Date.now()}@example.com`;
         const email2 = `test-2-${Date.now()}@example.com`;
-        const user1 = User.create(`test-id-1-${Date.now()}`, email1, 'password-hash', 'Test User 1');
-        const user2 = User.create(`test-id-2-${Date.now()}`, email2, 'password-hash', 'Test User 2');
+        const user1 = User.create(
+          `test-id-1-${Date.now()}`,
+          email1,
+          'password-hash',
+          'Test User 1',
+        );
+        const user2 = User.create(
+          `test-id-2-${Date.now()}`,
+          email2,
+          'password-hash',
+          'Test User 2',
+        );
 
         await repository.create(user1);
         await repository.create(user2);
 
         // user2のメールをuser1と同じに変更しようとする
-        const updatedUser2 = User.create(user2.id, email1, 'password-hash', 'Test User 2');
+        const updatedUser2 = user2.update(
+          email1,
+          'password-hash',
+          'Test User 2',
+        );
 
         await expect(repository.update(updatedUser2)).rejects.toThrow(
           RepositoryConflictError,
