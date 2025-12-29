@@ -56,14 +56,11 @@ describe('PrismaMemoRepository', () => {
   describe('正常系', () => {
     describe('create', () => {
       it('メモを作成できる', async () => {
-        const now = new Date();
         const memo = Memo.create(
           `test-id-${Date.now()}`,
           testUserId,
           'Test Title',
           'Test Content',
-          now,
-          now,
         );
 
         await repository.create(memo);
@@ -82,27 +79,18 @@ describe('PrismaMemoRepository', () => {
 
     describe('update', () => {
       it('メモのタイトルを変更できる', async () => {
-        const now = new Date();
         const memoId = `test-id-${Date.now()}`;
         const memo = Memo.create(
           memoId,
           testUserId,
           'Original Title',
           'Test Content',
-          now,
-          now,
         );
 
         await repository.create(memo);
 
-        const updatedMemo = Memo.create(
-          memoId,
-          testUserId,
-          'Updated Title',
-          'Test Content',
-          now,
-          now,
-        );
+        const savedMemo = await repository.findById(memoId);
+        const updatedMemo = savedMemo!.update('Updated Title', 'Test Content');
         await repository.update(updatedMemo);
 
         const result = await repository.findById(memoId);
@@ -113,27 +101,18 @@ describe('PrismaMemoRepository', () => {
       });
 
       it('メモの本文を変更できる', async () => {
-        const now = new Date();
         const memoId = `test-id-${Date.now()}`;
         const memo = Memo.create(
           memoId,
           testUserId,
           'Test Title',
           'Original Content',
-          now,
-          now,
         );
 
         await repository.create(memo);
 
-        const updatedMemo = Memo.create(
-          memoId,
-          testUserId,
-          'Test Title',
-          'Updated Content',
-          now,
-          now,
-        );
+        const savedMemo = await repository.findById(memoId);
+        const updatedMemo = savedMemo!.update('Test Title', 'Updated Content');
         await repository.update(updatedMemo);
 
         const result = await repository.findById(memoId);
@@ -146,15 +125,12 @@ describe('PrismaMemoRepository', () => {
 
     describe('findById', () => {
       it('id指定でメモがとってこれる', async () => {
-        const now = new Date();
         const memoId = `test-id-${Date.now()}`;
         const memo = Memo.create(
           memoId,
           testUserId,
           'Test Title',
           'Test Content',
-          now,
-          now,
         );
 
         await repository.create(memo);
@@ -176,15 +152,12 @@ describe('PrismaMemoRepository', () => {
 
     describe('delete', () => {
       it('should delete a memo', async () => {
-        const now = new Date();
         const memoId = `test-id-${Date.now()}`;
         const memo = Memo.create(
           memoId,
           testUserId,
           'Test Title',
           'Test Content',
-          now,
-          now,
         );
 
         await repository.create(memo);
@@ -202,48 +175,29 @@ describe('PrismaMemoRepository', () => {
     describe('create', () => {
       it('タイトルがない場合、メモを作成できない', () => {
         expect(() => {
-          Memo.create(
-            'test-id',
-            testUserId,
-            '',
-            'Test Content',
-            new Date(),
-            new Date(),
-          );
+          Memo.create('test-id', testUserId, '', 'Test Content');
         }).toThrow('タイトルは必須です');
       });
 
       it('タイトルが空白のみの場合、メモを作成できない', () => {
         expect(() => {
-          Memo.create(
-            'test-id',
-            testUserId,
-            '   ',
-            'Test Content',
-            new Date(),
-            new Date(),
-          );
+          Memo.create('test-id', testUserId, '   ', 'Test Content');
         }).toThrow('タイトルは必須です');
       });
 
       it('メモ作成時に、すでに存在していればRepositoryConflictErrorが投げられる', async () => {
-        const now = new Date();
         const memoId = `test-id-${Date.now()}`;
         const memo1 = Memo.create(
           memoId,
           testUserId,
           'Test Title 1',
           'Test Content 1',
-          now,
-          now,
         );
         const memo2 = Memo.create(
           memoId, // 同じIDを使用
           testUserId,
           'Test Title 2',
           'Test Content 2',
-          now,
-          now,
         );
 
         await repository.create(memo1);
@@ -256,15 +210,12 @@ describe('PrismaMemoRepository', () => {
 
     describe('update', () => {
       it('更新時対象がなければRepositoryNotFoundErrorが投げられる', async () => {
-        const now = new Date();
         const nonExistentMemoId = `non-existent-${Date.now()}`;
         const memo = Memo.create(
           nonExistentMemoId,
           testUserId,
           'Test Title',
           'Test Content',
-          now,
-          now,
         );
 
         await expect(repository.update(memo)).rejects.toThrow(

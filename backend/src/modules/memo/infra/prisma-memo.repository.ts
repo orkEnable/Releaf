@@ -103,7 +103,7 @@ export class PrismaMemoRepository implements MemoRepository {
       orderBy: { createdAt: 'desc' },
     });
     return records.map((r) =>
-      Memo.create(r.id, r.userId, r.title, r.content, r.createdAt, r.updatedAt),
+      Memo.from(r.id, r.userId, r.title, r.content, r.createdAt, r.updatedAt),
     );
   }
 }
