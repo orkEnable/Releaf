@@ -13,7 +13,8 @@
     "next": "16.0.7",
     "react": "19.2.0",
     "react-color": "^2.19.3",
-    "react-dom": "19.2.0"
+    "react-dom": "19.2.0",
+    "ulid": "^3.0.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
