@@ -2,10 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaUserRepository } from './prisma-user.repository';
 import { PrismaService } from '../../../../prisma/prisma.service';
 import { User } from '../domain/entities/user.entity';
-import {
-  RepositoryConflictError,
-  RepositoryNotFoundError,
-} from '../../common/errors';
+import { RepositoryNotFoundError } from '../../common/errors';
 
 describe('PrismaUserRepository', () => {
   let repository: PrismaUserRepository;
@@ -48,21 +45,13 @@ describe('PrismaUserRepository', () => {
   });
 
   describe('正常系', () => {
-    describe('create', () => {
-      it('ユーザーを作成できる', async () => {
-        const now = new Date();
+    describe('save', () => {
+      it('新規ユーザーを作成できる', async () => {
         const userId = `test-id-${Date.now()}`;
         const email = `test-${Date.now()}@example.com`;
-        const user = User.create(
-          userId,
-          email,
-          'password-hash',
-          'Test User',
-          now,
-          now,
-        );
+        const user = User.create(userId, email, 'password-hash', 'Test User');
 
-        await repository.create(user);
+        await repository.save(user);
 
         const createdUser = await prismaService.user.findUnique({
           where: { id: userId },
@@ -73,44 +62,11 @@ describe('PrismaUserRepository', () => {
         expect(createdUser?.email).toBe(email);
         expect(createdUser?.passwordHash).toBe('password-hash');
         expect(createdUser?.name).toBe('Test User');
-      });
-    });
-
-    describe('findById', () => {
-      it('特定のユーザーをとってこれる', async () => {
-        const now = new Date();
-        const userId = `test-id-${Date.now()}`;
-        const email = `test-${Date.now()}@example.com`;
-        const user = User.create(
-          userId,
-          email,
-          'password-hash',
-          'Test User',
-          now,
-          now,
-        );
-
-        await repository.create(user);
-
-        const result = await repository.findById(userId);
-
-        expect(result).toBeTruthy();
-        expect(result?.id).toBe(userId);
-        expect(result?.email).toBe(email);
-        expect(result?.passwordHash).toBe('password-hash');
-        expect(result?.name).toBe('Test User');
+        expect(createdUser?.createdAt).toBeInstanceOf(Date);
+        expect(createdUser?.updatedAt).toBeInstanceOf(Date);
       });
 
-      it('存在しないidの場合、nullを返す', async () => {
-        const result = await repository.findById('non-existent-id');
-
-        expect(result).toBeNull();
-      });
-    });
-
-    describe('update', () => {
-      it('ユーザーの名前を変更できる', async () => {
-        const now = new Date();
+      it('既存ユーザーの名前を更新できる', async () => {
         const userId = `test-id-${Date.now()}`;
         const email = `test-${Date.now()}@example.com`;
         const user = User.create(
@@ -118,21 +74,17 @@ describe('PrismaUserRepository', () => {
           email,
           'password-hash',
           'Original Name',
-          now,
-          now,
         );
 
-        await repository.create(user);
+        await repository.save(user);
 
         const updatedUser = User.create(
           userId,
           email,
           'password-hash',
           'Updated Name',
-          now,
-          now,
         );
-        await repository.update(updatedUser);
+        await repository.save(updatedUser);
 
         const result = await repository.findById(userId);
 
@@ -142,8 +94,7 @@ describe('PrismaUserRepository', () => {
         expect(result?.name).toBe('Updated Name');
       });
 
-      it('ユーザーのパスワードハッシュを変更できる', async () => {
-        const now = new Date();
+      it('既存ユーザーのパスワードハッシュを更新できる', async () => {
         const userId = `test-id-${Date.now()}`;
         const email = `test-${Date.now()}@example.com`;
         const user = User.create(
@@ -151,21 +102,17 @@ describe('PrismaUserRepository', () => {
           email,
           'original-password-hash',
           'Test User',
-          now,
-          now,
         );
 
-        await repository.create(user);
+        await repository.save(user);
 
         const updatedUser = User.create(
           userId,
           email,
           'new-password-hash',
           'Test User',
-          now,
-          now,
         );
-        await repository.update(updatedUser);
+        await repository.save(updatedUser);
 
         const result = await repository.findById(userId);
 
@@ -176,21 +123,63 @@ describe('PrismaUserRepository', () => {
       });
     });
 
-    describe('delete', () => {
-      it('ユーザーを削除できる', async () => {
-        const now = new Date();
+    describe('findById', () => {
+      it('特定のユーザーをとってこれる', async () => {
         const userId = `test-id-${Date.now()}`;
         const email = `test-${Date.now()}@example.com`;
-        const user = User.create(
-          userId,
-          email,
-          'password-hash',
-          'Test User',
-          now,
-          now,
-        );
+        const user = User.create(userId, email, 'password-hash', 'Test User');
 
-        await repository.create(user);
+        await repository.save(user);
+
+        const result = await repository.findById(userId);
+
+        expect(result).toBeTruthy();
+        expect(result?.id).toBe(userId);
+        expect(result?.email).toBe(email);
+        expect(result?.passwordHash).toBe('password-hash');
+        expect(result?.name).toBe('Test User');
+        expect(result?.createdAt).toBeInstanceOf(Date);
+        expect(result?.updatedAt).toBeInstanceOf(Date);
+      });
+
+      it('存在しないidの場合、nullを返す', async () => {
+        const result = await repository.findById('non-existent-id');
+
+        expect(result).toBeNull();
+      });
+    });
+
+    describe('findByEmail', () => {
+      it('メールアドレスでユーザーをとってこれる', async () => {
+        const userId = `test-id-${Date.now()}`;
+        const email = `test-${Date.now()}@example.com`;
+        const user = User.create(userId, email, 'password-hash', 'Test User');
+
+        await repository.save(user);
+
+        const result = await repository.findByEmail(email);
+
+        expect(result).toBeTruthy();
+        expect(result?.id).toBe(userId);
+        expect(result?.email).toBe(email);
+        expect(result?.passwordHash).toBe('password-hash');
+        expect(result?.name).toBe('Test User');
+      });
+
+      it('存在しないメールアドレスの場合、nullを返す', async () => {
+        const result = await repository.findByEmail('non-existent@example.com');
+
+        expect(result).toBeNull();
+      });
+    });
+
+    describe('delete', () => {
+      it('ユーザーを削除できる', async () => {
+        const userId = `test-id-${Date.now()}`;
+        const email = `test-${Date.now()}@example.com`;
+        const user = User.create(userId, email, 'password-hash', 'Test User');
+
+        await repository.save(user);
 
         await repository.delete(userId);
 
@@ -202,54 +191,6 @@ describe('PrismaUserRepository', () => {
   });
 
   describe('異常系', () => {
-    describe('create', () => {
-      it('ユーザー作成時に、すでに存在していればRepositoryConflictErrorが投げられる', async () => {
-        const now = new Date();
-        const email = `test-${Date.now()}@example.com`;
-        const user1 = User.create(
-          `test-id-1-${Date.now()}`,
-          email,
-          'password-hash',
-          'Test User 1',
-          now,
-          now,
-        );
-        const user2 = User.create(
-          `test-id-2-${Date.now()}`,
-          email, // 同じemailを使用
-          'password-hash',
-          'Test User 2',
-          now,
-          now,
-        );
-
-        await repository.create(user1);
-
-        await expect(repository.create(user2)).rejects.toThrow(
-          RepositoryConflictError,
-        );
-      });
-    });
-
-    describe('update', () => {
-      it('更新時対象がなければRepositoryNotFoundErrorが投げられる', async () => {
-        const now = new Date();
-        const nonExistentUserId = `non-existent-${Date.now()}`;
-        const user = User.create(
-          nonExistentUserId,
-          `test-${Date.now()}@example.com`,
-          'password-hash',
-          'Test User',
-          now,
-          now,
-        );
-
-        await expect(repository.update(user)).rejects.toThrow(
-          RepositoryNotFoundError,
-        );
-      });
-    });
-
     describe('delete', () => {
       it('削除時に対象がなければRepositoryNotFoundErrorが投げられる', async () => {
         const nonExistentUserId = `non-existent-${Date.now()}`;
