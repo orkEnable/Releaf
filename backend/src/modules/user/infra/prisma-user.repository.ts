@@ -12,6 +12,7 @@ import { Prisma } from '@prisma/client';
 @Injectable()
 export class PrismaUserRepository implements UserRepository {
   constructor(private readonly prisma: PrismaService) {}
+
   async create(user: User): Promise<void> {
     try {
       await this.prisma.user.create({
@@ -20,8 +21,6 @@ export class PrismaUserRepository implements UserRepository {
           email: user.email,
           passwordHash: user.passwordHash,
           name: user.name,
-          createdAt: user.createdAt,
-          updatedAt: user.updatedAt,
         },
       });
     } catch (e) {
@@ -54,6 +53,25 @@ export class PrismaUserRepository implements UserRepository {
     );
   }
 
+  async findByEmail(email: string): Promise<User | null> {
+    const record = await this.prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (record == null) {
+      return null;
+    }
+
+    return User.from(
+      record.id,
+      record.email,
+      record.passwordHash,
+      record.name,
+      record.createdAt,
+      record.updatedAt,
+    );
+  }
+
   async update(user: User): Promise<void> {
     try {
       await this.prisma.user.update({
@@ -62,10 +80,15 @@ export class PrismaUserRepository implements UserRepository {
           email: user.email,
           passwordHash: user.passwordHash,
           name: user.name,
-          updatedAt: user.updatedAt,
         },
       });
     } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2002'
+      ) {
+        throw new RepositoryConflictError('メールアドレスが重複しています。', e);
+      }
       if (
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2025'
