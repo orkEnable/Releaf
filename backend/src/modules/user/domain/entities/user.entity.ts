@@ -4,8 +4,8 @@ export class User {
     readonly email: string,
     readonly passwordHash: string,
     readonly name: string,
-    readonly createdAt: Date,
-    readonly updatedAt: Date,
+    readonly createdAt: Date | null,
+    readonly updatedAt: Date | null,
   ) {}
 
   static create(
@@ -13,10 +13,8 @@ export class User {
     email: string,
     passwordHash: string,
     name: string,
-    createdAt: Date,
-    updatedAt: Date,
   ): User {
-    return new User(id, email, passwordHash, name, createdAt, updatedAt);
+    return new User(id, email, passwordHash, name, null, null);
   }
 
   static from(
@@ -28,5 +26,16 @@ export class User {
     updatedAt: Date,
   ): User {
     return new User(id, email, passwordHash, name, createdAt, updatedAt);
+  }
+
+  update(email: string, passwordHash: string, name: string): User {
+    return new User(
+      this.id,
+      email,
+      passwordHash,
+      name,
+      this.createdAt,
+      this.updatedAt,
+    );
   }
 }
