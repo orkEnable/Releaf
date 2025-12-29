@@ -12,8 +12,6 @@ export class CreateMemoUseCase {
       command.userId,
       command.title,
       command.content,
-      new Date(),
-      new Date(),
     );
 
     await this.memoRepository.create(memo);
