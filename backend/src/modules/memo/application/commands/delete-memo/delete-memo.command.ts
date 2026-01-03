@@ -1,3 +1,6 @@
 export class DeleteMemoCommand {
-  constructor(readonly memoId: string) {}
+  constructor(
+    readonly userId: string,
+    readonly memoId: string,
+  ) {}
 }
