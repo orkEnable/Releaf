@@ -26,7 +26,7 @@ describe('MemoController', () => {
   };
 
   interface AuthenticatedRequest extends Request {
-    user: { userId: string; email: string };
+    user: { userId: string };
   }
 
   beforeEach(async () => {
@@ -67,7 +67,7 @@ describe('MemoController', () => {
       mockJwtAuthGuard.canActivate.mockImplementation(
         (context: ExecutionContext) => {
           const req = context.switchToHttp().getRequest<AuthenticatedRequest>();
-          req.user = { userId: mockUserId, email: 'test@example.com' };
+          req.user = { userId: mockUserId };
           return true;
         },
       );
@@ -111,7 +111,7 @@ describe('MemoController', () => {
       mockJwtAuthGuard.canActivate.mockImplementation(
         (context: ExecutionContext) => {
           const req = context.switchToHttp().getRequest<AuthenticatedRequest>();
-          req.user = { userId: mockUserId, email: 'test@example.com' };
+          req.user = { userId: mockUserId };
           return true;
         },
       );
@@ -156,7 +156,7 @@ describe('MemoController', () => {
       mockJwtAuthGuard.canActivate.mockImplementation(
         (context: ExecutionContext) => {
           const req = context.switchToHttp().getRequest<AuthenticatedRequest>();
-          req.user = { userId: mockUserId, email: 'test@example.com' };
+          req.user = { userId: mockUserId };
           return true;
         },
       );
