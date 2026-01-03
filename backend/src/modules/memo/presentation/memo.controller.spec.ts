@@ -91,7 +91,7 @@ describe('MemoController', () => {
       expect(calledCommand.content).toBe('Test Content');
     });
 
-    it('JWTがなければ401エラーを返す', async () => {
+    it('JWTがなければ403エラーを返す', async () => {
       mockJwtAuthGuard.canActivate.mockReturnValue(false);
 
       const body = { title: 'Test Title', content: 'Test Content' };
@@ -136,7 +136,7 @@ describe('MemoController', () => {
       expect(calledCommand.content).toBe('Updated Content');
     });
 
-    it('JWTなしなら401エラーを返す', async () => {
+    it('JWTなしなら403エラーを返す', async () => {
       mockJwtAuthGuard.canActivate.mockReturnValue(false);
 
       const body = { title: 'Updated Title', content: 'Updated Content' };
