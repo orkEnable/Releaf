@@ -62,8 +62,11 @@ export class MemoController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  async delete(@Param('id') id: string): Promise<void> {
-    const command = new DeleteMemoCommand(id);
+  async delete(
+    @CurrentUser() user: CurrentUser,
+    @Param('id') id: string,
+  ): Promise<void> {
+    const command = new DeleteMemoCommand(user.userId, id);
     await this.deleteMemoUseCase.execute(command);
   }
 }
