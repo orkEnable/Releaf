@@ -50,6 +50,7 @@ export class PrismaUserRepository implements UserRepository {
       record.name,
       record.createdAt,
       record.updatedAt,
+      record.deletedAt,
     );
   }
 
@@ -69,6 +70,7 @@ export class PrismaUserRepository implements UserRepository {
       record.name,
       record.createdAt,
       record.updatedAt,
+      record.deletedAt,
     );
   }
 
@@ -87,7 +89,10 @@ export class PrismaUserRepository implements UserRepository {
         e instanceof Prisma.PrismaClientKnownRequestError &&
         e.code === 'P2002'
       ) {
-        throw new RepositoryConflictError('メールアドレスが重複しています。', e);
+        throw new RepositoryConflictError(
+          'メールアドレスが重複しています。',
+          e,
+        );
       }
       if (
         e instanceof Prisma.PrismaClientKnownRequestError &&

@@ -25,7 +25,7 @@ export class User {
     name: string,
     createdAt: Date,
     updatedAt: Date,
-    deletedAt: Date,
+    deletedAt: Date | null,
   ): User {
     return new User(
       id,
