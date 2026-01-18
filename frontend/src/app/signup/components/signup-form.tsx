@@ -2,30 +2,34 @@
 
 import React from "react";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Leaf, Eye, EyeOff, Mail, Lock, User } from "lucide-react";
+import { signup } from "../actions";
 
 export function SignupForm() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (password !== confirmPassword) {
-      alert("パスワードが一致しません");
-      return;
-    }
+    setError(null);
     setIsLoading(true);
-    // 新規登録処理をここに実装
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsLoading(false);
+
+    const formData = new FormData(e.currentTarget);
+    const result = await signup(formData);
+
+    if (result.success) {
+      router.push("/login?registered=true");
+    } else {
+      setError(result.error || "登録に失敗しました");
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -40,6 +44,13 @@ export function SignupForm() {
           <p className="text-muted-foreground mt-2">新規アカウントを作成</p>
         </div>
 
+        {/* エラーメッセージ */}
+        {error && (
+          <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-lg mb-4">
+            {error}
+          </div>
+        )}
+
         {/* 新規登録フォーム */}
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
@@ -50,10 +61,9 @@ export function SignupForm() {
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
                 id="name"
+                name="name"
                 type="text"
                 placeholder="山田 太郎"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
                 className="pl-10 h-12 bg-input border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 required
               />
@@ -68,10 +78,9 @@ export function SignupForm() {
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
                 id="email"
+                name="email"
                 type="email"
                 placeholder="example@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
                 className="pl-10 h-12 bg-input border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 required
               />
@@ -86,10 +95,9 @@ export function SignupForm() {
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
                 id="password"
+                name="password"
                 type={showPassword ? "text" : "password"}
                 placeholder="8文字以上で入力"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 className="pl-10 pr-10 h-12 bg-input border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 required
                 minLength={8}
@@ -122,10 +130,9 @@ export function SignupForm() {
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
                 id="confirmPassword"
+                name="confirmPassword"
                 type={showConfirmPassword ? "text" : "password"}
                 placeholder="パスワードを再入力"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
                 className="pl-10 pr-10 h-12 bg-input border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 required
                 minLength={8}
@@ -189,7 +196,7 @@ export function SignupForm() {
         <p className="text-center text-muted-foreground mt-6">
           すでにアカウントをお持ちの方{" "}
           <a
-            href="#"
+            href="/login"
             className="text-primary hover:text-primary/80 font-semibold transition-colors"
           >
             ログイン
