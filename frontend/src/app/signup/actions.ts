@@ -31,7 +31,7 @@ export async function signup(formData: FormData): Promise<SignupResult> {
   }
 
   try {
-    const res = await fetch(`${API_BASE}/auth/signup`, {
+    const res = await fetch(`${API_BASE}/users`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
