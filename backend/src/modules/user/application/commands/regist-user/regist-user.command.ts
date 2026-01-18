@@ -1,7 +1,7 @@
 export class RegistUserCommand {
   constructor(
     readonly email: string,
-    readonly passwordHash: string,
+    readonly password: string,
     readonly name: string,
   ) {}
 }
