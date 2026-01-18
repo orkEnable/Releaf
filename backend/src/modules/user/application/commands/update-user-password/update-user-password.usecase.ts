@@ -2,6 +2,7 @@ import { UserRepository } from 'src/modules/user/domain/user.repository';
 import { UpdateUserPasswordCommand } from './update-user-password.command';
 import { UserNotFoundError } from '../../error/user-not-found.error';
 import { UserAlreadyDeletedError } from '../../error/user-already-deleted.error';
+import { hash } from 'bcrypt';
 
 export class UpdateUserPasswordUseCase {
   constructor(private readonly userRepository: UserRepository) {}
@@ -14,9 +15,9 @@ export class UpdateUserPasswordUseCase {
     if (user.isDeleted()) {
       throw new UserAlreadyDeletedError(command.userId);
     }
-    if (command.passwordHash === user.passwordHash) return;
 
-    const updatedUser = user.updatePasswordHash(command.passwordHash);
+    const passwordHash = await hash(command.password, 10);
+    const updatedUser = user.updatePasswordHash(passwordHash);
     await this.userRepository.update(updatedUser);
   }
 }
