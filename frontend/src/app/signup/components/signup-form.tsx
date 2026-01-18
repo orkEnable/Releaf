@@ -20,14 +20,19 @@ export function SignupForm() {
     e.preventDefault();
     setError(null);
     setIsLoading(true);
+    try {
+      const formData = new FormData(e.currentTarget);
+      const result = await signup(formData);
 
-    const formData = new FormData(e.currentTarget);
-    const result = await signup(formData);
-
-    if (result.success) {
-      router.push("/login?registered=true");
-    } else {
-      setError(result.error || "登録に失敗しました");
+      if (result.success) {
+        router.push("/login?registered=true");
+      } else {
+        setError(result.error || "登録に失敗しました");
+        setIsLoading(false);
+      }
+    } catch {
+      setError("ユーザー登録に失敗しました。");
+    } finally {
       setIsLoading(false);
     }
   };

@@ -13,6 +13,10 @@ export async function signup(formData: FormData): Promise<SignupResult> {
   const password = formData.get("password") as string;
   const confirmPassword = formData.get("confirmPassword") as string;
 
+  if (!API_BASE) {
+    return { success: false, error: "サーバー設定エラーが発生しました" };
+  }
+
   // バリデーション
   if (!name || !email || !password || !confirmPassword) {
     return { success: false, error: "すべての項目を入力してください" };
