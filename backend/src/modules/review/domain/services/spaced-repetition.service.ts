@@ -87,6 +87,7 @@ export class SpacedRepetitionService {
       if (grade === ReviewGrade.HARD) {
         intervalDays = Math.max(1, Math.round(intervalDays * 0.8));
       }
+      intervalDays = Math.max(1, intervalDays);
     }
 
     // 最大間隔は365日に制限
@@ -209,6 +210,7 @@ export class SpacedRepetitionService {
   ): number {
     // 安定性が高いほど忘却が遅くなる
     const adjustedStability = Math.max(0.5, stability);
-    return Math.exp(-daysSinceReview / adjustedStability);
+    const safeDays = Math.max(0, daysSinceReview);
+    return Math.exp(-safeDays / adjustedStability);
   }
 }

@@ -86,6 +86,8 @@ export class PrismaMemoRepository implements MemoRepository {
       record.userId,
       record.title,
       record.content,
+      record.reviewCount,
+      record.lastReviewedAt,
       record.createdAt,
       record.updatedAt,
     );
@@ -103,7 +105,39 @@ export class PrismaMemoRepository implements MemoRepository {
       orderBy: { createdAt: 'desc' },
     });
     return records.map((r) =>
-      Memo.from(r.id, r.userId, r.title, r.content, r.createdAt, r.updatedAt),
+      Memo.from(
+        r.id,
+        r.userId,
+        r.title,
+        r.content,
+        r.reviewCount,
+        r.lastReviewedAt,
+        r.createdAt,
+        r.updatedAt,
+      ),
     );
+  }
+
+  async incrementReviewCount(id: string, reviewedAt: Date): Promise<void> {
+    try {
+      await this.prisma.memo.update({
+        where: { id },
+        data: {
+          reviewCount: { increment: 1 },
+          lastReviewedAt: reviewedAt,
+        },
+      });
+    } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2025'
+      ) {
+        throw new RepositoryNotFoundError('メモが見つかりません', e);
+      }
+      throw new RepositoryPersistenceError(
+        '復習統計の更新に失敗しました',
+        e,
+      );
+    }
   }
 }
