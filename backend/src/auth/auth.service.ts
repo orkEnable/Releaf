@@ -3,6 +3,9 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaUserRepository } from '../modules/user/infra/prisma-user.repository';
 
+// タイミング攻撃対策用のダミーハッシュ（bcrypt cost=10）
+const DUMMY_HASH = '$2b$10$dummyhashforsecuritypurposesonly.................';
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -16,15 +19,11 @@ export class AuthService {
   ): Promise<{ accessToken: string }> {
     const user = await this.userRepository.findByEmail(email);
 
-    if (!user) {
-      throw new UnauthorizedException(
-        'メールアドレスまたはパスワードが正しくありません',
-      );
-    }
+    // ユーザーが存在しない場合もbcrypt.compareを実行してタイミング攻撃を防ぐ
+    const hashToCompare = user?.passwordHash ?? DUMMY_HASH;
+    const isPasswordValid = await bcrypt.compare(password, hashToCompare);
 
-    const isPasswordValid = await bcrypt.compare(password, user.passwordHash);
-
-    if (!isPasswordValid) {
+    if (!user || !isPasswordValid) {
       throw new UnauthorizedException(
         'メールアドレスまたはパスワードが正しくありません',
       );

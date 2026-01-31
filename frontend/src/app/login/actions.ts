@@ -1,6 +1,11 @@
 "use server";
 
+import { cookies } from "next/headers";
+
 const API_BASE = process.env.API_BASE_URL;
+if (!API_BASE) {
+  throw new Error("API_BASE_URL environment variable is not set");
+}
 
 export type LoginResult = {
   success: boolean;
@@ -33,9 +38,14 @@ export async function login(formData: FormData): Promise<LoginResult> {
       };
     }
 
-    // TODO: JWTトークンをcookieに保存する処理を追加
-    // const data = await res.json();
-    // cookies().set("token", data.token, { httpOnly: true, secure: true });
+    const data = await res.json();
+    const cookieStore = await cookies();
+    cookieStore.set("accessToken", data.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60, // 1時間（JWTの有効期限と合わせる）
+    });
 
     return { success: true };
   } catch (error) {
