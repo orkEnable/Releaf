@@ -3,8 +3,10 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaUserRepository } from '../modules/user/infra/prisma-user.repository';
 
-// タイミング攻撃対策用のダミーハッシュ（bcrypt cost=10）
-const DUMMY_HASH = '$2b$10$dummyhashforsecuritypurposesonly.................';
+// タイミング攻撃対策用のダミーハッシュ（bcrypt cost=10、60文字）
+// bcrypt.hashSync('dummy', 10) で生成した有効なハッシュ
+const DUMMY_HASH =
+  '$2b$10$abcdefghijklmnopqrstuuOHv.XcHxVxh2f9Sc8X9CKRJ9ZBsXMZa';
 
 @Injectable()
 export class AuthService {
