@@ -1,25 +1,37 @@
 "use client";
 
 import React from "react";
-
 import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Leaf, Eye, EyeOff, Mail, Lock } from "lucide-react";
+import { login } from "../actions";
 
 export function LoginForm() {
-  const [showPassword, setShowPassword] = useState(false);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const registered = searchParams.get("registered") === "true";
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError(null);
     setIsLoading(true);
-    // ログイン処理をここに実装
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    setIsLoading(false);
+
+    const formData = new FormData(e.currentTarget);
+    const result = await login(formData);
+
+    if (result.success) {
+      router.push("/");
+    } else {
+      setError(result.error || "ログインに失敗しました");
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -34,6 +46,20 @@ export function LoginForm() {
           <p className="text-muted-foreground mt-2">アカウントにログイン</p>
         </div>
 
+        {/* 登録完了メッセージ */}
+        {registered && (
+          <div className="bg-primary/10 text-primary text-sm p-3 rounded-lg mb-4">
+            アカウントが作成されました。ログインしてください。
+          </div>
+        )}
+
+        {/* エラーメッセージ */}
+        {error && (
+          <div className="bg-destructive/10 text-destructive text-sm p-3 rounded-lg mb-4">
+            {error}
+          </div>
+        )}
+
         {/* ログインフォーム */}
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-2">
@@ -44,10 +70,9 @@ export function LoginForm() {
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
                 id="email"
+                name="email"
                 type="email"
                 placeholder="example@email.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
                 className="pl-10 h-12 bg-input border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 required
               />
@@ -62,10 +87,9 @@ export function LoginForm() {
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
               <Input
                 id="password"
+                name="password"
                 type={showPassword ? "text" : "password"}
                 placeholder="パスワードを入力"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 className="pl-10 pr-10 h-12 bg-input border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all"
                 required
               />
@@ -122,7 +146,7 @@ export function LoginForm() {
         <p className="text-center text-muted-foreground mt-6">
           アカウントをお持ちでない方{" "}
           <a
-            href="#"
+            href="/signup"
             className="text-primary hover:text-primary/80 font-semibold transition-colors"
           >
             新規登録

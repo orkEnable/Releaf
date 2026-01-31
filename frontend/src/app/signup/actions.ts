@@ -1,6 +1,9 @@
 "use server";
 
 const API_BASE = process.env.API_BASE_URL;
+if (!API_BASE) {
+  throw new Error("API_BASE_URL environment variable is not set");
+}
 
 export type SignupResult = {
   success: boolean;
@@ -12,10 +15,6 @@ export async function signup(formData: FormData): Promise<SignupResult> {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
   const confirmPassword = formData.get("confirmPassword") as string;
-
-  if (!API_BASE) {
-    return { success: false, error: "サーバー設定エラーが発生しました" };
-  }
 
   // バリデーション
   if (!name || !email || !password || !confirmPassword) {
