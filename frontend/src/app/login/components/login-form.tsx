@@ -27,7 +27,7 @@ export function LoginForm() {
     const result = await login(formData);
 
     if (result.success) {
-      router.push("/");
+      router.push("/dashboard");
     } else {
       setError(result.error || "ログインに失敗しました");
       setIsLoading(false);
