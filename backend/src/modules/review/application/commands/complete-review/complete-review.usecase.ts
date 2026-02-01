@@ -27,10 +27,16 @@ export class CompleteReviewUseCase {
       throw new Error('復習計画が見つかりません');
     }
 
+    // memoIdの整合性を検証
+    if (currentPlan.memoId !== command.memoId) {
+      throw new Error('復習計画とメモIDが一致しません');
+    }
+
+    // 以降はcurrentPlan.memoIdを信頼して使用
+    const memoId = currentPlan.memoId;
+
     // 2. 過去の復習履歴を取得
-    const histories = await this.reviewLogRepository.findByMemoId(
-      command.memoId,
-    );
+    const histories = await this.reviewLogRepository.findByMemoId(memoId);
 
     // 3. 次の復習タイミングを計算
     const reviewHistories = histories.map((h) => ({
@@ -49,14 +55,14 @@ export class CompleteReviewUseCase {
     const completedPlan = currentPlan.complete(now);
     const reviewLog = ReviewLog.create(
       ulid(),
-      command.memoId,
+      memoId,
       command.grade,
       nextReview.intervalDays,
       now,
     );
     const nextPlan = ReviewPlan.create(
       ulid(),
-      command.memoId,
+      memoId,
       nextReview.nextReviewDate,
     );
 
@@ -69,7 +75,7 @@ export class CompleteReviewUseCase {
       // 6. 次の復習計画を作成
       await this.reviewPlanRepository.createTx(tx, nextPlan);
       // 7. メモの復習統計を更新
-      await this.memoRepository.incrementReviewCountTx(tx, command.memoId, now);
+      await this.memoRepository.incrementReviewCountTx(tx, memoId, now);
     });
   }
 }

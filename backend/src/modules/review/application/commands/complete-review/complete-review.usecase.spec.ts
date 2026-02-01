@@ -259,5 +259,36 @@ describe('CompleteReviewUseCase', () => {
         '復習計画が見つかりません',
       );
     });
+
+    it('復習計画のmemoIdとコマンドのmemoIdが一致しない場合エラーを投げる', async () => {
+      const reviewPlanId = 'plan-123';
+      const planMemoId = 'memo-123';
+      const wrongMemoId = 'memo-456';
+
+      const existingPlan = ReviewPlan.from(
+        reviewPlanId,
+        planMemoId,
+        new Date(),
+        ReviewPlanStatus.PENDING,
+        null,
+        new Date(),
+        new Date(),
+      );
+
+      reviewPlanRepository.findById.mockResolvedValue(existingPlan);
+
+      const command = new CompleteReviewCommand(
+        reviewPlanId,
+        wrongMemoId,
+        ReviewGrade.GOOD,
+      );
+
+      await expect(useCase.execute(command)).rejects.toThrow(
+        '復習計画とメモIDが一致しません',
+      );
+
+      // トランザクションが実行されていないことを確認
+      expect(unitOfWork.run).not.toHaveBeenCalled();
+    });
   });
 });
