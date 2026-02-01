@@ -17,6 +17,7 @@ describe('UpdateMemoUsecase', () => {
       findById: jest.fn(),
       findByUserId: jest.fn(),
       delete: jest.fn(),
+      incrementReviewCount: jest.fn(),
     };
     useCase = new UpdateMemoUsecase(memoRepository);
   });
@@ -30,6 +31,8 @@ describe('UpdateMemoUsecase', () => {
         userId,
         'Original Title',
         'Original Content',
+        0,
+        null,
         new Date(),
         new Date(),
       );
@@ -83,6 +86,8 @@ describe('UpdateMemoUsecase', () => {
         ownerId,
         'Original Title',
         'Original Content',
+        0,
+        null,
         new Date(),
         new Date(),
       );

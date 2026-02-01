@@ -10,4 +10,5 @@ export interface MemoRepository {
     offset?: number,
   ): Promise<Memo[]>;
   delete(id: string): Promise<void>;
+  incrementReviewCount(id: string, reviewedAt: Date): Promise<void>;
 }

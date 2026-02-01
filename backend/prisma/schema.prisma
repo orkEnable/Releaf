@@ -21,32 +21,63 @@ model User {
   memos        Memo[]
 }
 
-/// メモ
 model Memo {
-  id          String   @id @default(cuid())
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId      String
-  title       String
-  content     String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // optional: 集計キャッシュ
+  reviewCount    Int      @default(0)
+  lastReviewedAt DateTime?
 
   reviewPlans ReviewPlan[]
+  reviewLogs  ReviewLog[]
 
   @@index([userId])
 }
 
-/// 復習予定
 model ReviewPlan {
-  id          String             @id @default(cuid())
-  memo        Memo               @relation(fields: [memoId], references: [id], onDelete: Cascade)
+  id          String           @id @default(cuid())
   memoId      String
+  memo        Memo             @relation(fields: [memoId], references: [id], onDelete: Cascade)
   scheduledAt DateTime
+
+  status      ReviewPlanStatus @default(PENDING)
   doneAt      DateTime?
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
   @@index([memoId])
-  @@index([scheduledAt])
+  @@index([scheduledAt, status])
+}
+
+model ReviewLog {
+  id           String     @id @default(cuid())
+  memoId       String
+  memo         Memo       @relation(fields: [memoId], references: [id], onDelete: Cascade)
+
+  reviewedAt   DateTime   @default(now())
+  grade        ReviewGrade
+  intervalDays Int?
+
+  @@index([memoId, reviewedAt])
+  @@index([reviewedAt])
+}
+
+
+enum ReviewPlanStatus {
+  PENDING
+  DONE
+  SKIPPED
+}
+
+enum ReviewGrade {
+  AGAIN     // もう一度
+  HARD      // まあまあ（ニュアンス次第で）
+  GOOD      // 覚えた
 }

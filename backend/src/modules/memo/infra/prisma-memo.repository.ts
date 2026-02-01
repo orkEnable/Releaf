@@ -8,14 +8,24 @@ import {
   RepositoryPersistenceError,
 } from '../../common/errors';
 import { Prisma } from '@prisma/client';
+import { TransactionClient } from '../../common/infra/unit-of-work';
+
+type PrismaClient = PrismaService | TransactionClient;
 
 @Injectable()
 export class PrismaMemoRepository implements MemoRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(memo: Memo): Promise<void> {
+    await this.createTx(this.prisma, memo);
+  }
+
+  /**
+   * トランザクション対応のメモ作成
+   */
+  async createTx(tx: PrismaClient, memo: Memo): Promise<void> {
     try {
-      await this.prisma.memo.create({
+      await tx.memo.create({
         data: {
           id: memo.id,
           userId: memo.userId,
@@ -86,6 +96,8 @@ export class PrismaMemoRepository implements MemoRepository {
       record.userId,
       record.title,
       record.content,
+      record.reviewCount,
+      record.lastReviewedAt,
       record.createdAt,
       record.updatedAt,
     );
@@ -103,7 +115,47 @@ export class PrismaMemoRepository implements MemoRepository {
       orderBy: { createdAt: 'desc' },
     });
     return records.map((r) =>
-      Memo.from(r.id, r.userId, r.title, r.content, r.createdAt, r.updatedAt),
+      Memo.from(
+        r.id,
+        r.userId,
+        r.title,
+        r.content,
+        r.reviewCount,
+        r.lastReviewedAt,
+        r.createdAt,
+        r.updatedAt,
+      ),
     );
+  }
+
+  async incrementReviewCount(id: string, reviewedAt: Date): Promise<void> {
+    await this.incrementReviewCountTx(this.prisma, id, reviewedAt);
+  }
+
+  /**
+   * トランザクション対応の復習統計更新
+   */
+  async incrementReviewCountTx(
+    tx: PrismaClient,
+    id: string,
+    reviewedAt: Date,
+  ): Promise<void> {
+    try {
+      await tx.memo.update({
+        where: { id },
+        data: {
+          reviewCount: { increment: 1 },
+          lastReviewedAt: reviewedAt,
+        },
+      });
+    } catch (e) {
+      if (
+        e instanceof Prisma.PrismaClientKnownRequestError &&
+        e.code === 'P2025'
+      ) {
+        throw new RepositoryNotFoundError('メモが見つかりません', e);
+      }
+      throw new RepositoryPersistenceError('復習統計の更新に失敗しました', e);
+    }
   }
 }

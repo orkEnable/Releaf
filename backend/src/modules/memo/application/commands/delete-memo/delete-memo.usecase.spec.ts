@@ -17,6 +17,7 @@ describe('DeleteMemoUseCase', () => {
       findById: jest.fn(),
       findByUserId: jest.fn(),
       delete: jest.fn(),
+      incrementReviewCount: jest.fn(),
     };
     useCase = new DeleteMemoUseCase(memoRepository);
   });
@@ -30,6 +31,8 @@ describe('DeleteMemoUseCase', () => {
         userId,
         'Test Title',
         'Test Content',
+        0,
+        null,
         new Date(),
         new Date(),
       );
@@ -70,6 +73,8 @@ describe('DeleteMemoUseCase', () => {
         ownerId,
         'Test Title',
         'Test Content',
+        0,
+        null,
         new Date(),
         new Date(),
       );

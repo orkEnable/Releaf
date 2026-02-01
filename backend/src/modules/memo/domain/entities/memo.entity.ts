@@ -4,6 +4,8 @@ export class Memo {
     readonly userId: string,
     readonly title: string,
     readonly content: string,
+    readonly reviewCount: number,
+    readonly lastReviewedAt: Date | null,
     readonly createdAt: Date | null,
     readonly updatedAt: Date | null,
   ) {}
@@ -17,7 +19,7 @@ export class Memo {
     if (!title || title.trim().length === 0) {
       throw new Error('タイトルは必須です');
     }
-    return new Memo(id, userId, title, content, null, null);
+    return new Memo(id, userId, title, content, 0, null, null, null);
   }
 
   static from(
@@ -25,10 +27,21 @@ export class Memo {
     userId: string,
     title: string,
     content: string,
+    reviewCount: number,
+    lastReviewedAt: Date | null,
     createdAt: Date,
     updatedAt: Date,
   ): Memo {
-    return new Memo(id, userId, title, content, createdAt, updatedAt);
+    return new Memo(
+      id,
+      userId,
+      title,
+      content,
+      reviewCount,
+      lastReviewedAt,
+      createdAt,
+      updatedAt,
+    );
   }
 
   update(title: string, content: string): Memo {
@@ -40,6 +53,24 @@ export class Memo {
       this.userId,
       title,
       content,
+      this.reviewCount,
+      this.lastReviewedAt,
+      this.createdAt,
+      this.updatedAt,
+    );
+  }
+
+  /**
+   * 復習統計を更新する
+   */
+  recordReview(reviewedAt: Date): Memo {
+    return new Memo(
+      this.id,
+      this.userId,
+      this.title,
+      this.content,
+      this.reviewCount + 1,
+      reviewedAt,
       this.createdAt,
       this.updatedAt,
     );
