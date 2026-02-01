@@ -7,10 +7,13 @@ import { MemoController } from './memo.controller';
 import { CreateMemoUseCase } from '../application/commands/create-memo/create-memo.usecase';
 import { UpdateMemoUsecase } from '../application/commands/update-memo/update-memo.usecase';
 import { DeleteMemoUseCase } from '../application/commands/delete-memo/delete-memo.usecase';
+import { GetMemosUseCase } from '../application/queries/get-memos/get-memos.usecase';
 import { JwtAuthGuard } from '../../../auth/jwt-auth.guard';
 import { CreateMemoCommand } from '../application/commands/create-memo/create-memo.command';
 import { UpdateMemoCommand } from '../application/commands/update-memo/update-memo.command';
 import { DeleteMemoCommand } from '../application/commands/delete-memo/delete-memo.command';
+import { GetMemosQuery } from '../application/queries/get-memos/get-memos.query';
+import { Memo } from '../domain/entities/memo.entity';
 import type { Request } from 'express';
 
 describe('MemoController', () => {
@@ -18,6 +21,7 @@ describe('MemoController', () => {
   let createMemoUseCase: jest.Mocked<CreateMemoUseCase>;
   let updateMemoUseCase: jest.Mocked<UpdateMemoUsecase>;
   let deleteMemoUseCase: jest.Mocked<DeleteMemoUseCase>;
+  let getMemosUseCase: jest.Mocked<GetMemosUseCase>;
 
   const mockUserId = 'test-user-id';
 
@@ -42,12 +46,17 @@ describe('MemoController', () => {
       execute: jest.fn(),
     } as unknown as jest.Mocked<DeleteMemoUseCase>;
 
+    getMemosUseCase = {
+      execute: jest.fn(),
+    } as unknown as jest.Mocked<GetMemosUseCase>;
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [MemoController],
       providers: [
         { provide: CreateMemoUseCase, useValue: createMemoUseCase },
         { provide: UpdateMemoUsecase, useValue: updateMemoUseCase },
         { provide: DeleteMemoUseCase, useValue: deleteMemoUseCase },
+        { provide: GetMemosUseCase, useValue: getMemosUseCase },
       ],
     })
       .overrideGuard(JwtAuthGuard)
@@ -174,6 +183,87 @@ describe('MemoController', () => {
 
       const calledCommand = deleteMemoUseCase.execute.mock.calls[0][0];
       expect(calledCommand.memoId).toBe(memoId);
+    });
+  });
+
+  describe('GET /memos (一覧取得)', () => {
+    it('リクエストが正しければ200を返し、GetMemosUseCase.executeが呼ばれる', async () => {
+      mockJwtAuthGuard.canActivate.mockImplementation(
+        (context: ExecutionContext) => {
+          const req = context.switchToHttp().getRequest<AuthenticatedRequest>();
+          req.user = { userId: mockUserId };
+          return true;
+        },
+      );
+
+      const mockMemos = [
+        Memo.from(
+          'memo-1',
+          mockUserId,
+          'タイトル1',
+          'コンテンツ1',
+          0,
+          null,
+          new Date('2024-01-01'),
+          new Date('2024-01-01'),
+        ),
+        Memo.from(
+          'memo-2',
+          mockUserId,
+          'タイトル2',
+          'コンテンツ2',
+          3,
+          new Date('2024-01-02'),
+          new Date('2024-01-01'),
+          new Date('2024-01-02'),
+        ),
+      ];
+      getMemosUseCase.execute.mockResolvedValue(mockMemos);
+
+      const response = await request(app.getHttpServer()).get('/memos');
+
+      expect(response.status).toBe(200);
+      expect(getMemosUseCase.execute).toHaveBeenCalledTimes(1);
+      expect(getMemosUseCase.execute).toHaveBeenCalledWith(
+        expect.any(GetMemosQuery),
+      );
+
+      const calledQuery = getMemosUseCase.execute.mock.calls[0][0];
+      expect(calledQuery.userId).toBe(mockUserId);
+
+      expect(response.body).toHaveLength(2);
+      expect(response.body[0].id).toBe('memo-1');
+      expect(response.body[1].id).toBe('memo-2');
+    });
+
+    it('limitとoffsetを指定できる', async () => {
+      mockJwtAuthGuard.canActivate.mockImplementation(
+        (context: ExecutionContext) => {
+          const req = context.switchToHttp().getRequest<AuthenticatedRequest>();
+          req.user = { userId: mockUserId };
+          return true;
+        },
+      );
+      getMemosUseCase.execute.mockResolvedValue([]);
+
+      const response = await request(app.getHttpServer())
+        .get('/memos')
+        .query({ limit: 10, offset: 20 });
+
+      expect(response.status).toBe(200);
+
+      const calledQuery = getMemosUseCase.execute.mock.calls[0][0];
+      expect(calledQuery.limit).toBe('10');
+      expect(calledQuery.offset).toBe('20');
+    });
+
+    it('JWTなしなら403エラーを返す', async () => {
+      mockJwtAuthGuard.canActivate.mockReturnValue(false);
+
+      const response = await request(app.getHttpServer()).get('/memos');
+
+      expect(response.status).toBe(403);
+      expect(getMemosUseCase.execute).not.toHaveBeenCalled();
     });
   });
 });
