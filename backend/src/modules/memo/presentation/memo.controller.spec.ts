@@ -253,8 +253,8 @@ describe('MemoController', () => {
       expect(response.status).toBe(200);
 
       const calledQuery = getMemosUseCase.execute.mock.calls[0][0];
-      expect(calledQuery.limit).toBe('10');
-      expect(calledQuery.offset).toBe('20');
+      expect(calledQuery.limit).toBe(10);
+      expect(calledQuery.offset).toBe(20);
     });
 
     it('JWTなしなら403エラーを返す', async () => {
