@@ -3,6 +3,7 @@ import { MemoController } from './presentation/memo.controller';
 import { CreateMemoUseCase } from './application/commands/create-memo/create-memo.usecase';
 import { UpdateMemoUsecase } from './application/commands/update-memo/update-memo.usecase';
 import { DeleteMemoUseCase } from './application/commands/delete-memo/delete-memo.usecase';
+import { GetMemosUseCase } from './application/queries/get-memos/get-memos.usecase';
 import { PrismaMemoRepository } from './infra/prisma-memo.repository';
 import { PrismaModule } from '../../../prisma/prisma.module';
 import { ReviewModule } from '../review/review.module';
@@ -41,6 +42,12 @@ const MEMO_REPOSITORY = 'MEMO_REPOSITORY';
       provide: DeleteMemoUseCase,
       useFactory: (memoRepository: PrismaMemoRepository) =>
         new DeleteMemoUseCase(memoRepository),
+      inject: [PrismaMemoRepository],
+    },
+    {
+      provide: GetMemosUseCase,
+      useFactory: (memoRepository: PrismaMemoRepository) =>
+        new GetMemosUseCase(memoRepository),
       inject: [PrismaMemoRepository],
     },
   ],
