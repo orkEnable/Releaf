@@ -40,8 +40,15 @@ export class PrismaReviewPlanRepository implements ReviewPlanRepository {
   }
 
   async update(reviewPlan: ReviewPlan): Promise<void> {
+    await this.updateTx(this.prisma, reviewPlan);
+  }
+
+  /**
+   * トランザクション対応の復習計画更新
+   */
+  async updateTx(tx: PrismaClient, reviewPlan: ReviewPlan): Promise<void> {
     try {
-      await this.prisma.reviewPlan.update({
+      await tx.reviewPlan.update({
         where: { id: reviewPlan.id },
         data: {
           scheduledAt: reviewPlan.scheduledAt,

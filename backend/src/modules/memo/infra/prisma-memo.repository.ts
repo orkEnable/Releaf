@@ -129,8 +129,19 @@ export class PrismaMemoRepository implements MemoRepository {
   }
 
   async incrementReviewCount(id: string, reviewedAt: Date): Promise<void> {
+    await this.incrementReviewCountTx(this.prisma, id, reviewedAt);
+  }
+
+  /**
+   * トランザクション対応の復習統計更新
+   */
+  async incrementReviewCountTx(
+    tx: PrismaClient,
+    id: string,
+    reviewedAt: Date,
+  ): Promise<void> {
     try {
-      await this.prisma.memo.update({
+      await tx.memo.update({
         where: { id },
         data: {
           reviewCount: { increment: 1 },
@@ -144,10 +155,7 @@ export class PrismaMemoRepository implements MemoRepository {
       ) {
         throw new RepositoryNotFoundError('メモが見つかりません', e);
       }
-      throw new RepositoryPersistenceError(
-        '復習統計の更新に失敗しました',
-        e,
-      );
+      throw new RepositoryPersistenceError('復習統計の更新に失敗しました', e);
     }
   }
 }

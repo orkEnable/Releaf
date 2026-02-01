@@ -4,14 +4,24 @@ import { ReviewLog } from '../domain/entities/review-log.entity';
 import { ReviewGrade } from '../domain/value-objects/review-grade';
 import { PrismaService } from '../../../../prisma/prisma.service';
 import { RepositoryPersistenceError } from '../../common/errors';
+import { TransactionClient } from '../../common/infra/unit-of-work';
+
+type PrismaClient = PrismaService | TransactionClient;
 
 @Injectable()
 export class PrismaReviewLogRepository implements ReviewLogRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(reviewLog: ReviewLog): Promise<void> {
+    await this.createTx(this.prisma, reviewLog);
+  }
+
+  /**
+   * トランザクション対応の復習ログ作成
+   */
+  async createTx(tx: PrismaClient, reviewLog: ReviewLog): Promise<void> {
     try {
-      await this.prisma.reviewLog.create({
+      await tx.reviewLog.create({
         data: {
           id: reviewLog.id,
           memoId: reviewLog.memoId,

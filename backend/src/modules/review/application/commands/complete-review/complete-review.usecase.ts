@@ -1,32 +1,31 @@
 import { ulid } from 'ulid';
 import { CompleteReviewCommand } from './complete-review.command';
-import { ReviewPlanRepository } from 'src/modules/review/domain/review-plan.repository';
-import { ReviewLogRepository } from 'src/modules/review/domain/review-log.repository';
-import { MemoRepository } from 'src/modules/memo/domain/memo.repository';
+import { PrismaReviewPlanRepository } from 'src/modules/review/infra/prisma-review-plan.repository';
+import { PrismaReviewLogRepository } from 'src/modules/review/infra/prisma-review-log.repository';
+import { PrismaMemoRepository } from 'src/modules/memo/infra/prisma-memo.repository';
 import { ReviewLog } from 'src/modules/review/domain/entities/review-log.entity';
 import { ReviewPlan } from 'src/modules/review/domain/entities/review-plan.entity';
 import { SpacedRepetitionService } from 'src/modules/review/domain/services/spaced-repetition.service';
+import { UnitOfWork } from 'src/modules/common/infra/unit-of-work';
 
 export class CompleteReviewUseCase {
   constructor(
-    private readonly reviewPlanRepository: ReviewPlanRepository,
-    private readonly reviewLogRepository: ReviewLogRepository,
-    private readonly memoRepository: MemoRepository,
+    private readonly reviewPlanRepository: PrismaReviewPlanRepository,
+    private readonly reviewLogRepository: PrismaReviewLogRepository,
+    private readonly memoRepository: PrismaMemoRepository,
+    private readonly unitOfWork: UnitOfWork,
   ) {}
 
   async execute(command: CompleteReviewCommand): Promise<void> {
     const now = new Date();
 
-    // 1. 現在のReviewPlanを取得して完了にする
+    // 1. 現在のReviewPlanを取得
     const currentPlan = await this.reviewPlanRepository.findById(
       command.reviewPlanId,
     );
     if (!currentPlan) {
       throw new Error('復習計画が見つかりません');
     }
-
-    const completedPlan = currentPlan.complete(now);
-    await this.reviewPlanRepository.update(completedPlan);
 
     // 2. 過去の復習履歴を取得
     const histories = await this.reviewLogRepository.findByMemoId(
@@ -46,7 +45,8 @@ export class CompleteReviewUseCase {
       now,
     );
 
-    // 4. 復習ログを記録
+    // エンティティを事前に作成
+    const completedPlan = currentPlan.complete(now);
     const reviewLog = ReviewLog.create(
       ulid(),
       command.memoId,
@@ -54,17 +54,22 @@ export class CompleteReviewUseCase {
       nextReview.intervalDays,
       now,
     );
-    await this.reviewLogRepository.create(reviewLog);
-
-    // 5. 次の復習計画を作成
     const nextPlan = ReviewPlan.create(
       ulid(),
       command.memoId,
       nextReview.nextReviewDate,
     );
-    await this.reviewPlanRepository.create(nextPlan);
 
-    // 6. メモの復習統計を更新
-    await this.memoRepository.incrementReviewCount(command.memoId, now);
+    // トランザクション内で全ての更新を実行
+    await this.unitOfWork.run(async (tx) => {
+      // 4. 現在の計画を完了にする
+      await this.reviewPlanRepository.updateTx(tx, completedPlan);
+      // 5. 復習ログを記録
+      await this.reviewLogRepository.createTx(tx, reviewLog);
+      // 6. 次の復習計画を作成
+      await this.reviewPlanRepository.createTx(tx, nextPlan);
+      // 7. メモの復習統計を更新
+      await this.memoRepository.incrementReviewCountTx(tx, command.memoId, now);
+    });
   }
 }

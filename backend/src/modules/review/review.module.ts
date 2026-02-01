@@ -5,6 +5,7 @@ import { PrismaReviewLogRepository } from './infra/prisma-review-log.repository'
 import { CompleteReviewUseCase } from './application/commands/complete-review/complete-review.usecase';
 import { MemoModule } from '../memo/memo.module';
 import { PrismaMemoRepository } from '../memo/infra/prisma-memo.repository';
+import { UnitOfWork } from '../common/infra/unit-of-work';
 
 const REVIEW_PLAN_REPOSITORY = 'REVIEW_PLAN_REPOSITORY';
 const REVIEW_LOG_REPOSITORY = 'REVIEW_LOG_REPOSITORY';
@@ -14,6 +15,7 @@ const REVIEW_LOG_REPOSITORY = 'REVIEW_LOG_REPOSITORY';
   providers: [
     PrismaReviewPlanRepository,
     PrismaReviewLogRepository,
+    UnitOfWork,
     {
       provide: REVIEW_PLAN_REPOSITORY,
       useExisting: PrismaReviewPlanRepository,
@@ -28,16 +30,19 @@ const REVIEW_LOG_REPOSITORY = 'REVIEW_LOG_REPOSITORY';
         reviewPlanRepository: PrismaReviewPlanRepository,
         reviewLogRepository: PrismaReviewLogRepository,
         memoRepository: PrismaMemoRepository,
+        unitOfWork: UnitOfWork,
       ) =>
         new CompleteReviewUseCase(
           reviewPlanRepository,
           reviewLogRepository,
           memoRepository,
+          unitOfWork,
         ),
       inject: [
         PrismaReviewPlanRepository,
         PrismaReviewLogRepository,
         PrismaMemoRepository,
+        UnitOfWork,
       ],
     },
   ],
