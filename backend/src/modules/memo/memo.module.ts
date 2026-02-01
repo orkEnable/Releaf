@@ -7,6 +7,7 @@ import { PrismaMemoRepository } from './infra/prisma-memo.repository';
 import { PrismaModule } from '../../../prisma/prisma.module';
 import { ReviewModule } from '../review/review.module';
 import { PrismaReviewPlanRepository } from '../review/infra/prisma-review-plan.repository';
+import { UnitOfWork } from '../common/infra/unit-of-work';
 
 const MEMO_REPOSITORY = 'MEMO_REPOSITORY';
 
@@ -15,6 +16,7 @@ const MEMO_REPOSITORY = 'MEMO_REPOSITORY';
   controllers: [MemoController],
   providers: [
     PrismaMemoRepository,
+    UnitOfWork,
     {
       provide: MEMO_REPOSITORY,
       useExisting: PrismaMemoRepository,
@@ -24,8 +26,10 @@ const MEMO_REPOSITORY = 'MEMO_REPOSITORY';
       useFactory: (
         memoRepository: PrismaMemoRepository,
         reviewPlanRepository: PrismaReviewPlanRepository,
-      ) => new CreateMemoUseCase(memoRepository, reviewPlanRepository),
-      inject: [PrismaMemoRepository, PrismaReviewPlanRepository],
+        unitOfWork: UnitOfWork,
+      ) =>
+        new CreateMemoUseCase(memoRepository, reviewPlanRepository, unitOfWork),
+      inject: [PrismaMemoRepository, PrismaReviewPlanRepository, UnitOfWork],
     },
     {
       provide: UpdateMemoUsecase,

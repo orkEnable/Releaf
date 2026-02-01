@@ -8,14 +8,24 @@ import {
   RepositoryPersistenceError,
 } from '../../common/errors';
 import { Prisma } from '@prisma/client';
+import { TransactionClient } from '../../common/infra/unit-of-work';
+
+type PrismaClient = PrismaService | TransactionClient;
 
 @Injectable()
 export class PrismaReviewPlanRepository implements ReviewPlanRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(reviewPlan: ReviewPlan): Promise<void> {
+    await this.createTx(this.prisma, reviewPlan);
+  }
+
+  /**
+   * トランザクション対応の復習計画作成
+   */
+  async createTx(tx: PrismaClient, reviewPlan: ReviewPlan): Promise<void> {
     try {
-      await this.prisma.reviewPlan.create({
+      await tx.reviewPlan.create({
         data: {
           id: reviewPlan.id,
           memoId: reviewPlan.memoId,

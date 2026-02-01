@@ -8,14 +8,24 @@ import {
   RepositoryPersistenceError,
 } from '../../common/errors';
 import { Prisma } from '@prisma/client';
+import { TransactionClient } from '../../common/infra/unit-of-work';
+
+type PrismaClient = PrismaService | TransactionClient;
 
 @Injectable()
 export class PrismaMemoRepository implements MemoRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(memo: Memo): Promise<void> {
+    await this.createTx(this.prisma, memo);
+  }
+
+  /**
+   * トランザクション対応のメモ作成
+   */
+  async createTx(tx: PrismaClient, memo: Memo): Promise<void> {
     try {
-      await this.prisma.memo.create({
+      await tx.memo.create({
         data: {
           id: memo.id,
           userId: memo.userId,
