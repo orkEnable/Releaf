@@ -19,6 +19,16 @@ const STORAGE_KEY = "memo_drafts";
  */
 export function useMemoDraft(memoId: string) {
   const apiSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isApiCallInProgressRef = useRef(false);
+  const pendingSaveRef = useRef<{
+    title: string;
+    content: string;
+    options?: {
+      onSaving?: () => void;
+      onSaved?: (newMemoId?: string) => void;
+      onError?: (error: Error) => void;
+    };
+  } | null>(null);
 
   // localStorageから全下書きを取得
   const getAllDrafts = useCallback((): Record<string, MemoDraft> => {
@@ -105,8 +115,15 @@ export function useMemoDraft(memoId: string) {
         clearTimeout(apiSaveTimeoutRef.current);
       }
 
-      // 3. デバウンスしてAPI保存（1.5秒後）
+      // 3. API呼び出し中なら保留リクエストとして保存
+      if (isApiCallInProgressRef.current) {
+        pendingSaveRef.current = { title, content, options };
+        return;
+      }
+
+      // 4. デバウンスしてAPI保存（1.5秒後）
       apiSaveTimeoutRef.current = setTimeout(async () => {
+        isApiCallInProgressRef.current = true;
         options?.onSaving?.();
 
         try {
@@ -117,6 +134,18 @@ export function useMemoDraft(memoId: string) {
           options?.onSaved?.(newMemoId ?? undefined);
         } catch (error) {
           options?.onError?.(error as Error);
+        } finally {
+          isApiCallInProgressRef.current = false;
+
+          // 保留中のリクエストがあれば処理（新しいIDで再保存）
+          if (pendingSaveRef.current) {
+            const pending = pendingSaveRef.current;
+            pendingSaveRef.current = null;
+            // 次のティックで実行（スタックオーバーフロー防止）
+            setTimeout(() => {
+              saveDraft(pending.title, pending.content, pending.options);
+            }, 0);
+          }
         }
       }, 1500);
     },
