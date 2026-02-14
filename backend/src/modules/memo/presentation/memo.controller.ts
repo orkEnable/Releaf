@@ -42,13 +42,14 @@ export class MemoController {
     @CurrentUser() user: CurrentUser,
     @Body()
     body: CreateMemoBodyDto,
-  ): Promise<void> {
+  ): Promise<{ id: string }> {
     const command = new CreateMemoCommand(
       user.userId,
       body.title,
       body.content,
     );
-    await this.createMemoUseCase.execute(command);
+    const memoId = await this.createMemoUseCase.execute(command);
+    return { id: memoId };
   }
 
   @Put(':id')
