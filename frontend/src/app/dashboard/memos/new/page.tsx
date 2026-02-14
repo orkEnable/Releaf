@@ -46,10 +46,16 @@ export default function NewMemoPage() {
 
   const { saveDraft } = useMemoDraft(memoId);
 
+  // saveDraftをrefで保持（依存配列から外すため）
+  const saveDraftRef = useRef(saveDraft);
+  useEffect(() => {
+    saveDraftRef.current = saveDraft;
+  }, [saveDraft]);
+
   // 初回レンダリングをスキップするためのref
   const isFirstRender = useRef(true);
 
-  // ハイブリッド自動保存
+  // ハイブリッド自動保存（title/contentの変更時のみ発火）
   useEffect(() => {
     // 初回レンダリングはスキップ（復元直後の保存を防ぐ）
     if (isFirstRender.current) {
@@ -62,8 +68,8 @@ export default function NewMemoPage() {
       return;
     }
 
-    // ハイブリッド保存を実行
-    saveDraft(title, content, {
+    // ハイブリッド保存を実行（refから最新のsaveDraftを使用）
+    saveDraftRef.current(title, content, {
       onSaving: () => setSaveStatus("saving"),
       onSaved: (newMemoId) => {
         setSaveStatus("saved");
@@ -74,7 +80,7 @@ export default function NewMemoPage() {
       },
       onError: () => setSaveStatus("offline"),
     });
-  }, [title, content, saveDraft]);
+  }, [title, content]); // saveDraftを依存配列から削除
 
   // 入力時にステータスをリセットし、state更新
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
