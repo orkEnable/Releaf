@@ -3,19 +3,20 @@
 import { AppSidebar } from "@/components/app-sidebar";
 import { Button } from "@/components/ui/button";
 import { Menu, ArrowLeft, Check, CloudOff } from "lucide-react";
-import { useState, useEffect, useMemo, useId, useRef } from "react";
+import { useState, useEffect, useId, useRef, useReducer } from "react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
 import { useMemoDraft, type MemoDraft } from "@/hooks/useMemoDraft";
 
-// localStorageから下書きを取得（初期化用）
-function getInitialDraft(): MemoDraft | null {
+const STORAGE_KEY = "memo_drafts";
+
+// localStorageから下書きを取得
+function getStoredDraft(): MemoDraft | null {
   if (typeof window === "undefined") return null;
   try {
-    const stored = localStorage.getItem("memo_drafts");
+    const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return null;
     const drafts = JSON.parse(stored) as Record<string, MemoDraft>;
-    // 新規メモの下書きを探す（new_で始まるIDのうち最新のもの）
     const newDrafts = Object.values(drafts).filter((d) =>
       d.id.startsWith("new_")
     );
@@ -26,23 +27,76 @@ function getInitialDraft(): MemoDraft | null {
   }
 }
 
+// メモ状態の型
+type MemoState = {
+  title: string;
+  content: string;
+  memoId: string;
+  saveStatus: "idle" | "saving" | "saved" | "offline";
+  isInitialized: boolean;
+};
+
+type MemoAction =
+  | { type: "RESTORE_DRAFT"; draft: MemoDraft }
+  | { type: "INITIALIZE" }
+  | { type: "SET_TITLE"; title: string }
+  | { type: "SET_CONTENT"; content: string }
+  | { type: "SET_MEMO_ID"; memoId: string }
+  | { type: "SET_SAVE_STATUS"; status: MemoState["saveStatus"] };
+
+function memoReducer(state: MemoState, action: MemoAction): MemoState {
+  switch (action.type) {
+    case "RESTORE_DRAFT":
+      return {
+        ...state,
+        title: action.draft.title,
+        content: action.draft.content,
+        memoId: action.draft.id,
+        saveStatus: "offline",
+        isInitialized: true,
+      };
+    case "INITIALIZE":
+      return { ...state, isInitialized: true };
+    case "SET_TITLE":
+      return {
+        ...state,
+        title: action.title,
+        saveStatus:
+          state.saveStatus === "saved" || state.saveStatus === "offline"
+            ? "idle"
+            : state.saveStatus,
+      };
+    case "SET_CONTENT":
+      return {
+        ...state,
+        content: action.content,
+        saveStatus:
+          state.saveStatus === "saved" || state.saveStatus === "offline"
+            ? "idle"
+            : state.saveStatus,
+      };
+    case "SET_MEMO_ID":
+      return { ...state, memoId: action.memoId };
+    case "SET_SAVE_STATUS":
+      return { ...state, saveStatus: action.status };
+    default:
+      return state;
+  }
+}
+
 export default function NewMemoPage() {
-  // 遅延初期化: 初回レンダリング時にlocalStorageから読み込む
-  const initialDraft = useMemo(() => getInitialDraft(), []);
-
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [title, setTitle] = useState(() => initialDraft?.title ?? "");
-  const [content, setContent] = useState(() => initialDraft?.content ?? "");
-  const [saveStatus, setSaveStatus] = useState<
-    "idle" | "saving" | "saved" | "offline"
-  >(() => (initialDraft ? "offline" : "idle"));
 
-  // 新規メモ用のID（復元された下書きがあればそのID、なければ新規生成）
-  // API保存後に実際のIDに更新される
   const tempId = useId();
-  const [memoId, setMemoId] = useState(
-    () => initialDraft?.id ?? `new_${tempId}`
-  );
+  const [state, dispatch] = useReducer(memoReducer, {
+    title: "",
+    content: "",
+    memoId: `new_${tempId}`,
+    saveStatus: "idle",
+    isInitialized: false,
+  });
+
+  const { title, content, memoId, saveStatus, isInitialized } = state;
 
   const { saveDraft } = useMemoDraft(memoId);
 
@@ -52,14 +106,20 @@ export default function NewMemoPage() {
     saveDraftRef.current = saveDraft;
   }, [saveDraft]);
 
-  // 初回レンダリングをスキップするためのref
-  const isFirstRender = useRef(true);
+  // マウント後に一度だけ下書きを復元
+  useEffect(() => {
+    const draft = getStoredDraft();
+    if (draft) {
+      dispatch({ type: "RESTORE_DRAFT", draft });
+    } else {
+      dispatch({ type: "INITIALIZE" });
+    }
+  }, []);
 
   // ハイブリッド自動保存（title/contentの変更時のみ発火）
   useEffect(() => {
-    // 初回レンダリングはスキップ（復元直後の保存を防ぐ）
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
+    // 初期化完了前は何もしない
+    if (!isInitialized) {
       return;
     }
 
@@ -70,31 +130,23 @@ export default function NewMemoPage() {
 
     // ハイブリッド保存を実行（refから最新のsaveDraftを使用）
     saveDraftRef.current(title, content, {
-      onSaving: () => setSaveStatus("saving"),
+      onSaving: () => dispatch({ type: "SET_SAVE_STATUS", status: "saving" }),
       onSaved: (newMemoId) => {
-        setSaveStatus("saved");
-        // 新規作成時は返されたIDに更新（以降はPUTで更新される）
+        dispatch({ type: "SET_SAVE_STATUS", status: "saved" });
         if (newMemoId) {
-          setMemoId(newMemoId);
+          dispatch({ type: "SET_MEMO_ID", memoId: newMemoId });
         }
       },
-      onError: () => setSaveStatus("offline"),
+      onError: () => dispatch({ type: "SET_SAVE_STATUS", status: "offline" }),
     });
-  }, [title, content]); // saveDraftを依存配列から削除
+  }, [title, content, isInitialized]);
 
-  // 入力時にステータスをリセットし、state更新
   const handleTitleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setTitle(e.target.value);
-    if (saveStatus === "saved" || saveStatus === "offline") {
-      setSaveStatus("idle");
-    }
+    dispatch({ type: "SET_TITLE", title: e.target.value });
   };
 
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setContent(e.target.value);
-    if (saveStatus === "saved" || saveStatus === "offline") {
-      setSaveStatus("idle");
-    }
+    dispatch({ type: "SET_CONTENT", content: e.target.value });
   };
 
   return (
