@@ -76,9 +76,7 @@ export function useMemoDraft(memoId: string) {
   // APIへデバウンス保存（新規作成時はIDを返す）
   const saveDraftToApi = useCallback(
     async (title: string, content: string): Promise<string | null> => {
-      console.log("[useMemoDraft] Saving to API...", { memoId, title, content });
       const result = await saveMemo(memoId, title, content);
-      console.log("[useMemoDraft] API result:", result);
       if (!result.success) {
         throw new Error(result.error || "保存に失敗しました");
       }
@@ -99,11 +97,8 @@ export function useMemoDraft(memoId: string) {
         onError?: (error: Error) => void;
       }
     ) => {
-      console.log("[useMemoDraft] saveDraft called", { title, content });
-
       // 1. localStorageに即時保存
       saveDraftLocal(title, content);
-      console.log("[useMemoDraft] Saved to localStorage");
 
       // 2. 既存のAPIタイマーをクリア
       if (apiSaveTimeoutRef.current) {
@@ -121,7 +116,6 @@ export function useMemoDraft(memoId: string) {
           // 新規作成時は新しいIDを渡す
           options?.onSaved?.(newMemoId ?? undefined);
         } catch (error) {
-          console.error("[useMemoDraft] API error:", error);
           options?.onError?.(error as Error);
         }
       }, 1500);

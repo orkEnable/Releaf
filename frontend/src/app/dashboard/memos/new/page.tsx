@@ -69,7 +69,6 @@ export default function NewMemoPage() {
         setSaveStatus("saved");
         // 新規作成時は返されたIDに更新（以降はPUTで更新される）
         if (newMemoId) {
-          console.log("[NewMemoPage] Received new memoId:", newMemoId);
           setMemoId(newMemoId);
         }
       },
