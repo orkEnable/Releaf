@@ -15,7 +15,7 @@ export class CreateMemoUseCase {
     private readonly unitOfWork: UnitOfWork,
   ) {}
 
-  async execute(command: CreateMemoCommand): Promise<void> {
+  async execute(command: CreateMemoCommand): Promise<string> {
     const memo = Memo.create(
       ulid(),
       command.userId,
@@ -44,5 +44,7 @@ export class CreateMemoUseCase {
       await this.memoRepository.createTx(tx, memo);
       await this.reviewPlanRepository.createTx(tx, reviewPlan);
     });
+
+    return memo.id;
   }
 }
