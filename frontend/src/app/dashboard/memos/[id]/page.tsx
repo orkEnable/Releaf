@@ -2,14 +2,33 @@
 
 import { AppSidebar } from "@/components/app-sidebar";
 import { Button } from "@/components/ui/button";
-import { Menu, ArrowLeft, Check, CloudOff } from "lucide-react";
+import { Menu, ArrowLeft, Check, CloudOff, Loader2 } from "lucide-react";
 import { useState, useEffect, useId, useRef, useReducer } from "react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { useMemoDraft, STORAGE_KEY, type MemoDraft } from "@/hooks/useMemoDraft";
+import { useParams } from "next/navigation";
+import {
+  useMemoDraft,
+  STORAGE_KEY,
+  type MemoDraft,
+} from "@/hooks/useMemoDraft";
+import { getMemo } from "../actions";
 
-// localStorageから下書きを取得
-function getStoredDraft(): MemoDraft | null {
+// localStorageから特定IDの下書きを取得
+function getStoredDraftById(id: string): MemoDraft | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (!stored) return null;
+    const drafts = JSON.parse(stored) as Record<string, MemoDraft>;
+    return drafts[id] || null;
+  } catch {
+    return null;
+  }
+}
+
+// localStorageから新規下書きを取得
+function getStoredNewDraft(): MemoDraft | null {
   if (typeof window === "undefined") return null;
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
@@ -32,11 +51,16 @@ type MemoState = {
   memoId: string;
   saveStatus: "idle" | "saving" | "saved" | "offline";
   isInitialized: boolean;
+  isLoading: boolean;
+  error: string | null;
 };
 
 type MemoAction =
+  | { type: "LOAD_START" }
+  | { type: "LOAD_SUCCESS"; title: string; content: string; memoId: string }
+  | { type: "LOAD_ERROR"; error: string }
   | { type: "RESTORE_DRAFT"; draft: MemoDraft }
-  | { type: "INITIALIZE" }
+  | { type: "INITIALIZE"; memoId: string }
   | { type: "SET_TITLE"; title: string }
   | { type: "SET_CONTENT"; content: string }
   | { type: "SET_MEMO_ID"; memoId: string }
@@ -44,6 +68,24 @@ type MemoAction =
 
 function memoReducer(state: MemoState, action: MemoAction): MemoState {
   switch (action.type) {
+    case "LOAD_START":
+      return { ...state, isLoading: true, error: null };
+    case "LOAD_SUCCESS":
+      return {
+        ...state,
+        title: action.title,
+        content: action.content,
+        memoId: action.memoId,
+        isLoading: false,
+        isInitialized: true,
+      };
+    case "LOAD_ERROR":
+      return {
+        ...state,
+        isLoading: false,
+        error: action.error,
+        isInitialized: true,
+      };
     case "RESTORE_DRAFT":
       return {
         ...state,
@@ -52,9 +94,10 @@ function memoReducer(state: MemoState, action: MemoAction): MemoState {
         memoId: action.draft.id,
         saveStatus: "offline",
         isInitialized: true,
+        isLoading: false,
       };
     case "INITIALIZE":
-      return { ...state, isInitialized: true };
+      return { ...state, memoId: action.memoId, isInitialized: true, isLoading: false };
     case "SET_TITLE":
       return {
         ...state,
@@ -82,19 +125,26 @@ function memoReducer(state: MemoState, action: MemoAction): MemoState {
   }
 }
 
-export default function NewMemoPage() {
+export default function MemoEditorPage() {
+  const params = useParams();
+  const paramId = params.id as string;
+  const isNewMemo = paramId === "new";
+
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const tempId = useId();
   const [state, dispatch] = useReducer(memoReducer, {
     title: "",
     content: "",
-    memoId: `new_${tempId}`,
+    memoId: isNewMemo ? `new_${tempId}` : paramId,
     saveStatus: "idle",
     isInitialized: false,
+    isLoading: !isNewMemo,
+    error: null,
   });
 
-  const { title, content, memoId, saveStatus, isInitialized } = state;
+  const { title, content, memoId, saveStatus, isInitialized, isLoading, error } =
+    state;
 
   const { saveDraft } = useMemoDraft(memoId);
 
@@ -104,15 +154,51 @@ export default function NewMemoPage() {
     saveDraftRef.current = saveDraft;
   }, [saveDraft]);
 
-  // マウント後に一度だけ下書きを復元
+  // マウント後に初期化
   useEffect(() => {
-    const draft = getStoredDraft();
-    if (draft) {
-      dispatch({ type: "RESTORE_DRAFT", draft });
-    } else {
-      dispatch({ type: "INITIALIZE" });
+    async function initialize() {
+      if (isNewMemo) {
+        // 新規作成: ローカル下書きを復元
+        const draft = getStoredNewDraft();
+        if (draft) {
+          dispatch({ type: "RESTORE_DRAFT", draft });
+        } else {
+          dispatch({ type: "INITIALIZE", memoId: `new_${tempId}` });
+        }
+      } else {
+        // 編集: まずローカル下書きを確認、なければAPIから取得
+        const localDraft = getStoredDraftById(paramId);
+        if (localDraft) {
+          dispatch({ type: "RESTORE_DRAFT", draft: localDraft });
+          return;
+        }
+
+        dispatch({ type: "LOAD_START" });
+        try {
+          const result = await getMemo(paramId);
+          if (result.success && result.memo) {
+            dispatch({
+              type: "LOAD_SUCCESS",
+              title: result.memo.title,
+              content: result.memo.content,
+              memoId: result.memo.id,
+            });
+          } else {
+            dispatch({
+              type: "LOAD_ERROR",
+              error: result.error || "メモの取得に失敗しました",
+            });
+          }
+        } catch {
+          dispatch({
+            type: "LOAD_ERROR",
+            error: "メモの取得中にエラーが発生しました",
+          });
+        }
+      }
     }
-  }, []);
+    initialize();
+  }, [isNewMemo, paramId, tempId]);
 
   // ハイブリッド自動保存（title/contentの変更時のみ発火）
   useEffect(() => {
@@ -146,6 +232,47 @@ export default function NewMemoPage() {
   const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     dispatch({ type: "SET_CONTENT", content: e.target.value });
   };
+
+  // ローディング中
+  if (isLoading) {
+    return (
+      <div className="h-screen flex bg-background overflow-hidden">
+        <aside
+          className={cn(
+            "fixed lg:static inset-y-0 left-0 z-50 transform transition-transform duration-200 ease-in-out lg:transform-none",
+            "-translate-x-full lg:translate-x-0"
+          )}
+        >
+          <AppSidebar />
+        </aside>
+        <main className="flex-1 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </main>
+      </div>
+    );
+  }
+
+  // エラー時
+  if (error) {
+    return (
+      <div className="h-screen flex bg-background overflow-hidden">
+        <aside
+          className={cn(
+            "fixed lg:static inset-y-0 left-0 z-50 transform transition-transform duration-200 ease-in-out lg:transform-none",
+            "-translate-x-full lg:translate-x-0"
+          )}
+        >
+          <AppSidebar />
+        </aside>
+        <main className="flex-1 flex flex-col items-center justify-center gap-4">
+          <p className="text-destructive">{error}</p>
+          <Link href="/dashboard/memos">
+            <Button variant="outline">メモ一覧に戻る</Button>
+          </Link>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen flex bg-background overflow-hidden">
@@ -189,7 +316,9 @@ export default function NewMemoPage() {
                 <ArrowLeft className="w-5 h-5" />
               </Button>
             </Link>
-            <h1 className="font-semibold text-foreground">新規メモ</h1>
+            <h1 className="font-semibold text-foreground">
+              {isNewMemo ? "新規メモ" : "メモを編集"}
+            </h1>
           </div>
 
           {/* 自動保存ステータス */}
