@@ -50,13 +50,18 @@ export default function MemosPage() {
     async function fetchMemos() {
       setIsLoading(true);
       setError(null);
-      const result = await getMemos();
-      if (result.success && result.memos) {
-        setMemos(result.memos);
-      } else {
-        setError(result.error || "メモの取得に失敗しました");
+      try {
+        const result = await getMemos();
+        if (result.success && result.memos) {
+          setMemos(result.memos);
+        } else {
+          setError(result.error || "メモの取得に失敗しました");
+        }
+      } catch {
+        setError("メモの取得中にエラーが発生しました");
+      } finally {
+        setIsLoading(false);
       }
-      setIsLoading(false);
     }
     fetchMemos();
   }, []);
@@ -188,16 +193,18 @@ export default function MemosPage() {
           )}
         </div>
 
-        {/* フローティング新規メモボタン */}
-        <Link href="/dashboard/memos/new">
-          <Button
-            size="icon"
-            className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg z-50"
-          >
-            <Plus className="w-6 h-6" />
-            <span className="sr-only">新規メモ</span>
-          </Button>
-        </Link>
+        {/* フローティング新規メモボタン（サイドバー開放時は非表示） */}
+        {!sidebarOpen && (
+          <Link href="/dashboard/memos/new">
+            <Button
+              size="icon"
+              className="fixed bottom-6 right-6 w-14 h-14 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg z-50"
+            >
+              <Plus className="w-6 h-6" />
+              <span className="sr-only">新規メモ</span>
+            </Button>
+          </Link>
+        )}
       </main>
     </div>
   );
