@@ -148,7 +148,7 @@ export default function NewMemoPage() {
   };
 
   return (
-    <div className="min-h-screen flex bg-background">
+    <div className="h-screen flex bg-background overflow-hidden">
       {/* モバイルオーバーレイ */}
       {sidebarOpen && (
         <div
