@@ -25,6 +25,7 @@ export function useMemoDraft(memoId: string) {
   }, [memoId]);
 
   const apiSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingRetryTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isApiCallInProgressRef = useRef(false);
   const pendingSaveRef = useRef<{
     title: string;
@@ -155,7 +156,8 @@ export function useMemoDraft(memoId: string) {
             const pending = pendingSaveRef.current;
             pendingSaveRef.current = null;
             // 次のティックで実行（スタックオーバーフロー防止）
-            setTimeout(() => {
+            pendingRetryTimeoutRef.current = setTimeout(() => {
+              pendingRetryTimeoutRef.current = null;
               saveDraftRef.current?.(pending.title, pending.content, pending.options);
             }, 0);
           }
@@ -191,6 +193,9 @@ export function useMemoDraft(memoId: string) {
     return () => {
       if (apiSaveTimeoutRef.current) {
         clearTimeout(apiSaveTimeoutRef.current);
+      }
+      if (pendingRetryTimeoutRef.current) {
+        clearTimeout(pendingRetryTimeoutRef.current);
       }
     };
   }, []);
