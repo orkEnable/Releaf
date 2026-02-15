@@ -29,6 +29,12 @@ export type GetMemosResult = {
   error?: string;
 };
 
+export type GetMemoResult = {
+  success: boolean;
+  memo?: Memo;
+  error?: string;
+};
+
 /**
  * メモを新規作成
  */
@@ -165,6 +171,41 @@ export async function getMemos(
     return { success: true, memos };
   } catch (error) {
     console.error("Get memos error:", error);
+    return { success: false, error: "サーバーに接続できませんでした" };
+  }
+}
+
+/**
+ * 単一メモを取得
+ */
+export async function getMemo(memoId: string): Promise<GetMemoResult> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("accessToken")?.value;
+
+  if (!token) {
+    return { success: false, error: "認証が必要です" };
+  }
+
+  try {
+    const res = await fetch(`${API_BASE}/memos/${memoId}`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      return {
+        success: false,
+        error: data.message || "メモの取得に失敗しました",
+      };
+    }
+
+    const memo = await res.json();
+    return { success: true, memo };
+  } catch (error) {
+    console.error("Get memo error:", error);
     return { success: false, error: "サーバーに接続できませんでした" };
   }
 }

@@ -16,6 +16,8 @@ import { CreateMemoUseCase } from '../application/commands/create-memo/create-me
 import { UpdateMemoUsecase } from '../application/commands/update-memo/update-memo.usecase';
 import { DeleteMemoUseCase } from '../application/commands/delete-memo/delete-memo.usecase';
 import { GetMemosUseCase } from '../application/queries/get-memos/get-memos.usecase';
+import { GetMemoByIdUseCase } from '../application/queries/get-memo-by-id/get-memo-by-id.usecase';
+import { GetMemoByIdQuery } from '../application/queries/get-memo-by-id/get-memo-by-id.query';
 import { CreateMemoCommand } from '../application/commands/create-memo/create-memo.command';
 import { UpdateMemoCommand } from '../application/commands/update-memo/update-memo.command';
 import { DeleteMemoCommand } from '../application/commands/delete-memo/delete-memo.command';
@@ -34,6 +36,7 @@ export class MemoController {
     private readonly updateMemoUseCase: UpdateMemoUsecase,
     private readonly deleteMemoUseCase: DeleteMemoUseCase,
     private readonly getMemosUseCase: GetMemosUseCase,
+    private readonly getMemoByIdUseCase: GetMemoByIdUseCase,
   ) {}
 
   @Post()
@@ -91,5 +94,16 @@ export class MemoController {
     );
     const memos = await this.getMemosUseCase.execute(query);
     return MemoResponseDto.fromEntities(memos);
+  }
+
+  @Get(':id')
+  @HttpCode(HttpStatus.OK)
+  async getById(
+    @CurrentUser() user: CurrentUser,
+    @Param('id') id: string,
+  ): Promise<MemoResponseDto> {
+    const query = new GetMemoByIdQuery(id, user.userId);
+    const memo = await this.getMemoByIdUseCase.execute(query);
+    return MemoResponseDto.fromEntity(memo);
   }
 }
