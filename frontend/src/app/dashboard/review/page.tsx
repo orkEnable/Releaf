@@ -97,7 +97,7 @@ export default function ReviewPage() {
   // 完了画面
   if (isComplete) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6">
+      <div className="h-screen bg-background flex items-center justify-center p-6 overflow-hidden">
         <Card className="w-full max-w-md border-border bg-card text-center">
           <CardContent className="p-8">
             <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-primary/10 flex items-center justify-center">
@@ -121,7 +121,7 @@ export default function ReviewPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="h-screen bg-background flex flex-col overflow-hidden">
       {/* ヘッダー */}
       <header className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3">
         <div className="max-w-2xl mx-auto flex items-center gap-4">

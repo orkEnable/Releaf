@@ -13,6 +13,22 @@ export type MemoResult = {
   error?: string;
 };
 
+export type Memo = {
+  id: string;
+  title: string;
+  content: string;
+  reviewCount: number;
+  lastReviewedAt: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+};
+
+export type GetMemosResult = {
+  success: boolean;
+  memos?: Memo[];
+  error?: string;
+};
+
 /**
  * メモを新規作成
  */
@@ -108,4 +124,47 @@ export async function saveMemo(
     return createMemo(title, content);
   }
   return updateMemo(memoId, title, content);
+}
+
+/**
+ * メモ一覧を取得
+ */
+export async function getMemos(
+  limit?: number,
+  offset?: number
+): Promise<GetMemosResult> {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("accessToken")?.value;
+
+  if (!token) {
+    return { success: false, error: "認証が必要です" };
+  }
+
+  try {
+    const params = new URLSearchParams();
+    if (limit !== undefined) params.append("limit", String(limit));
+    if (offset !== undefined) params.append("offset", String(offset));
+
+    const url = `${API_BASE}/memos${params.toString() ? `?${params}` : ""}`;
+    const res = await fetch(url, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      return {
+        success: false,
+        error: data.message || "メモの取得に失敗しました",
+      };
+    }
+
+    const memos = await res.json();
+    return { success: true, memos };
+  } catch (error) {
+    console.error("Get memos error:", error);
+    return { success: false, error: "サーバーに接続できませんでした" };
+  }
 }
