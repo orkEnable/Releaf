@@ -10,7 +10,7 @@ export interface MemoDraft {
   updatedAt: number;
 }
 
-const STORAGE_KEY = "memo_drafts";
+export const STORAGE_KEY = "memo_drafts";
 
 /**
  * メモの下書きをlocalStorageで管理するフック
@@ -18,6 +18,12 @@ const STORAGE_KEY = "memo_drafts";
  * - デバウンスしてAPIへ保存（サーバー負荷軽減）
  */
 export function useMemoDraft(memoId: string) {
+  // memoIdをrefで保持（常に最新の値を参照するため）
+  const memoIdRef = useRef(memoId);
+  useEffect(() => {
+    memoIdRef.current = memoId;
+  }, [memoId]);
+
   const apiSaveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isApiCallInProgressRef = useRef(false);
   const pendingSaveRef = useRef<{
@@ -44,17 +50,19 @@ export function useMemoDraft(memoId: string) {
   // 特定のメモの下書きを取得
   const getDraft = useCallback((): MemoDraft | null => {
     const drafts = getAllDrafts();
-    return drafts[memoId] || null;
-  }, [memoId, getAllDrafts]);
+    return drafts[memoIdRef.current] || null;
+  }, [getAllDrafts]);
 
   // localStorageに即時保存
+  // memoIdRefを使用して常に最新のIDで保存
   const saveDraftLocal = useCallback(
     (title: string, content: string) => {
       if (typeof window === "undefined") return;
 
+      const currentMemoId = memoIdRef.current;
       const drafts = getAllDrafts();
-      drafts[memoId] = {
-        id: memoId,
+      drafts[currentMemoId] = {
+        id: currentMemoId,
         title,
         content,
         updatedAt: Date.now(),
@@ -66,7 +74,7 @@ export function useMemoDraft(memoId: string) {
         console.error("Failed to save draft to localStorage:", e);
       }
     },
-    [memoId, getAllDrafts]
+    [getAllDrafts]
   );
 
   // localStorageから下書きを削除（API保存成功後に呼ぶ）
@@ -74,30 +82,35 @@ export function useMemoDraft(memoId: string) {
     if (typeof window === "undefined") return;
 
     const drafts = getAllDrafts();
-    delete drafts[memoId];
+    delete drafts[memoIdRef.current];
 
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(drafts));
     } catch (e) {
       console.error("Failed to clear draft from localStorage:", e);
     }
-  }, [memoId, getAllDrafts]);
+  }, [getAllDrafts]);
 
   // APIへデバウンス保存（新規作成時はIDを返す）
+  // memoIdRefを使用して常に最新のIDでAPIを呼び出す
   const saveDraftToApi = useCallback(
     async (title: string, content: string): Promise<string | null> => {
-      const result = await saveMemo(memoId, title, content);
+      const currentMemoId = memoIdRef.current;
+      const result = await saveMemo(currentMemoId, title, content);
       if (!result.success) {
         throw new Error(result.error || "保存に失敗しました");
       }
       // 新規作成時は新しいIDを返す、更新時はnull
       return result.memoId ?? null;
     },
-    [memoId]
+    [] // memoIdRefを使用するため依存配列は空
   );
 
+  // saveDraftをrefで保持（pending save再試行時に最新の関数を使用するため）
+  const saveDraftRef = useRef<typeof saveDraftImpl | null>(null);
+
   // ハイブリッド保存: localStorage即時 + APIデバウンス
-  const saveDraft = useCallback(
+  const saveDraftImpl = useCallback(
     (
       title: string,
       content: string,
@@ -137,19 +150,40 @@ export function useMemoDraft(memoId: string) {
         } finally {
           isApiCallInProgressRef.current = false;
 
-          // 保留中のリクエストがあれば処理（新しいIDで再保存）
+          // 保留中のリクエストがあれば処理（refから最新の関数を使用）
           if (pendingSaveRef.current) {
             const pending = pendingSaveRef.current;
             pendingSaveRef.current = null;
             // 次のティックで実行（スタックオーバーフロー防止）
             setTimeout(() => {
-              saveDraft(pending.title, pending.content, pending.options);
+              saveDraftRef.current?.(pending.title, pending.content, pending.options);
             }, 0);
           }
         }
       }, 1500);
     },
     [saveDraftLocal, saveDraftToApi, clearDraft]
+  );
+
+  // saveDraftImplをrefに保持
+  useEffect(() => {
+    saveDraftRef.current = saveDraftImpl;
+  }, [saveDraftImpl]);
+
+  // 外部公開用のsaveDraft（常に最新のsaveDraftImplを呼び出す）
+  const saveDraft = useCallback(
+    (
+      title: string,
+      content: string,
+      options?: {
+        onSaving?: () => void;
+        onSaved?: (newMemoId?: string) => void;
+        onError?: (error: Error) => void;
+      }
+    ) => {
+      saveDraftImpl(title, content, options);
+    },
+    [saveDraftImpl]
   );
 
   // クリーンアップ

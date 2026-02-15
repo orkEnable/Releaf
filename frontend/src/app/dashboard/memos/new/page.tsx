@@ -6,9 +6,7 @@ import { Menu, ArrowLeft, Check, CloudOff } from "lucide-react";
 import { useState, useEffect, useId, useRef, useReducer } from "react";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
-import { useMemoDraft, type MemoDraft } from "@/hooks/useMemoDraft";
-
-const STORAGE_KEY = "memo_drafts";
+import { useMemoDraft, STORAGE_KEY, type MemoDraft } from "@/hooks/useMemoDraft";
 
 // localStorageから下書きを取得
 function getStoredDraft(): MemoDraft | null {
@@ -226,6 +224,7 @@ export default function NewMemoPage() {
               placeholder="タイトルを入力..."
               value={title}
               onChange={handleTitleChange}
+              aria-label="メモのタイトル"
               className="w-full text-2xl sm:text-3xl font-bold text-foreground placeholder:text-muted-foreground/50 bg-transparent border-none outline-none mb-6"
             />
 
@@ -237,6 +236,7 @@ export default function NewMemoPage() {
               placeholder="メモを書き始めましょう..."
               value={content}
               onChange={handleContentChange}
+              aria-label="メモの本文"
               className="w-full min-h-[calc(100vh-220px)] text-base leading-relaxed text-foreground placeholder:text-muted-foreground/50 bg-transparent border-none outline-none resize-none"
             />
           </div>
